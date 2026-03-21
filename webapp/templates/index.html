@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Firm Matter Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#06070b;--surface:rgba(14,16,24,.85);--surface-2:rgba(20,23,33,.9);--surface-3:#1e2230;
+  --border:rgba(255,255,255,.06);--border-light:rgba(255,255,255,.1);
+  --text:#e8eaf0;--text-2:#9498a8;--text-3:#5c6078;
+  --accent:#6c8cff;--accent-glow:#6c8cff30;--accent-bright:#8aa4ff;
+  --red:#ff5a6a;--red-dim:#ff5a6a15;--red-glow:#ff5a6a25;
+  --orange:#ffaa44;--orange-dim:#ffaa4415;
+  --green:#3dd68c;--green-dim:#3dd68c15;--green-glow:#3dd68c25;
+  --yellow:#ffcc55;--yellow-dim:#ffcc5515;
+  --purple:#a07cff;--purple-dim:#a07cff15;
+  --gradient:linear-gradient(135deg,#6c8cff 0%,#a07cff 50%,#ff6cd8 100%);
+  --radius:10px;--radius-lg:14px;--radius-xl:18px;
+  --shadow:0 4px 24px rgba(0,0,0,.4);
+  --shadow-lg:0 8px 40px rgba(0,0,0,.5);
+  --glass:saturate(180%) blur(16px);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.5;min-height:100vh;overflow-x:hidden}
+
+/* Animated mesh gradient background */
+.app{display:flex;min-height:100vh;position:relative}
+.app::before{content:'';position:fixed;inset:0;z-index:0;background:
+  radial-gradient(ellipse 80% 60% at 10% 20%,rgba(108,140,255,.08) 0%,transparent 60%),
+  radial-gradient(ellipse 60% 80% at 80% 80%,rgba(160,124,255,.06) 0%,transparent 50%),
+  radial-gradient(ellipse 50% 50% at 50% 0%,rgba(255,108,216,.04) 0%,transparent 50%);
+  animation:meshShift 20s ease-in-out infinite alternate;pointer-events:none}
+@keyframes meshShift{
+  0%{background:
+    radial-gradient(ellipse 80% 60% at 10% 20%,rgba(108,140,255,.08) 0%,transparent 60%),
+    radial-gradient(ellipse 60% 80% at 80% 80%,rgba(160,124,255,.06) 0%,transparent 50%),
+    radial-gradient(ellipse 50% 50% at 50% 0%,rgba(255,108,216,.04) 0%,transparent 50%)}
+  100%{background:
+    radial-gradient(ellipse 70% 70% at 30% 60%,rgba(108,140,255,.06) 0%,transparent 60%),
+    radial-gradient(ellipse 80% 60% at 60% 10%,rgba(160,124,255,.08) 0%,transparent 50%),
+    radial-gradient(ellipse 60% 40% at 80% 90%,rgba(255,108,216,.05) 0%,transparent 50%)}}
+
+/* Sidebar — frosted glass with texture */
+.sidebar{width:280px;background:var(--surface);-webkit-backdrop-filter:var(--glass);backdrop-filter:var(--glass);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;background-image:url('/static/img/sidebar-texture.png');background-size:300px;background-blend-mode:overlay;background-repeat:repeat}
+.sidebar-brand{padding:24px 20px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px}
+.sidebar-brand img{width:48px;height:48px;border-radius:50%;border:2px solid rgba(108,140,255,.3);animation:logoGlow 4s ease-in-out infinite;box-shadow:0 0 20px rgba(108,140,255,.15),0 0 60px rgba(108,140,255,.05)}
+@keyframes logoGlow{0%,100%{box-shadow:0 0 20px rgba(108,140,255,.15),0 0 60px rgba(108,140,255,.05);border-color:rgba(108,140,255,.3)}50%{box-shadow:0 0 28px rgba(108,140,255,.25),0 0 80px rgba(108,140,255,.08);border-color:rgba(160,124,255,.4)}}
+.sidebar-brand-text h1{font-size:14px;font-weight:700;letter-spacing:.3px;background:var(--gradient);background-size:200% 200%;animation:gradientText 6s ease infinite;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+@keyframes gradientText{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+.sidebar-brand-text .firm{font-size:11px;color:var(--text-3);font-weight:500;margin-top:1px}
+.sidebar-search{padding:16px 16px 12px}
+.sidebar-search input{width:100%;background:rgba(24,27,37,.6);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px 10px 36px;color:var(--text);font-family:inherit;font-size:13px;outline:none;transition:all .3s;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%235c6078' viewBox='0 0 24 24'%3E%3Cpath d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' stroke='%235c6078' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:12px center}
+.sidebar-search input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow),0 0 20px rgba(108,140,255,.08)}
+.sidebar-search input::placeholder{color:var(--text-3)}
+.sidebar-nav{padding:0 16px;margin-bottom:12px;display:flex;gap:4px;position:relative}
+.nav-btn{flex:1;background:transparent;border:1px solid transparent;border-radius:var(--radius);padding:8px 10px;color:var(--text-3);font-size:12px;font-family:inherit;cursor:pointer;text-align:center;transition:all .25s;font-weight:600;letter-spacing:.3px;position:relative;z-index:1}
+.nav-btn:hover{color:var(--text-2)}
+.nav-btn.active{background:var(--accent-glow);border-color:rgba(108,140,255,.3);color:var(--accent-bright);box-shadow:0 0 16px rgba(108,140,255,.1)}
+.sidebar-filters{padding:0 16px;margin-bottom:12px;display:flex;gap:6px;flex-wrap:wrap}
+.filter-btn{background:transparent;border:1px solid var(--border);border-radius:20px;padding:4px 12px;color:var(--text-3);font-size:11px;font-family:inherit;cursor:pointer;transition:all .25s;font-weight:500}
+.filter-btn:hover{border-color:var(--text-3);color:var(--text-2);box-shadow:0 0 12px rgba(255,255,255,.03)}
+.filter-btn.active{background:var(--accent-glow);border-color:rgba(108,140,255,.3);color:var(--accent-bright);box-shadow:0 0 12px rgba(108,140,255,.1)}
+.matter-list{flex:1;overflow-y:auto;padding:4px 10px}
+.matter-item{padding:12px 14px;border-radius:var(--radius);cursor:pointer;margin-bottom:2px;transition:all .2s;border-left:3px solid transparent;position:relative}
+.matter-item:hover{background:rgba(255,255,255,.03)}
+.matter-item.active{background:rgba(108,140,255,.06);border-left-color:var(--accent);box-shadow:inset 0 0 30px rgba(108,140,255,.04)}
+.matter-item.closed-matter{opacity:.4}
+.matter-item.closed-matter:hover{opacity:.7}
+.matter-item .file-no{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-3);letter-spacing:.5px}
+.matter-item .client-name{font-size:13px;font-weight:600;color:var(--text);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.matter-item .matter-type-tag,.tag{display:inline-block;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;letter-spacing:.3px}
+.tag-SCC{background:var(--red-dim);color:var(--red)}.tag-Employment{background:var(--purple-dim);color:var(--purple)}.tag-Corporate{background:var(--accent-glow);color:var(--accent)}.tag-Transactional{background:var(--green-dim);color:var(--green)}.tag-Demand\/Recovery{background:var(--orange-dim);color:var(--orange)}.tag-Other{background:var(--surface-3);color:var(--text-3)}
+.sidebar-footer{padding:14px 16px;border-top:1px solid var(--border);font-size:11px;color:var(--text-3);display:flex;align-items:center;gap:6px}
+.sidebar-footer .dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green-glow);animation:pulse 3s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 8px var(--green-glow)}50%{opacity:.6;box-shadow:0 0 14px var(--green-glow)}}
+
+/* Main */
+.main{margin-left:280px;flex:1;min-height:100vh;position:relative;z-index:1}
+.view{padding:36px 40px;max-width:1200px;display:none;animation:viewIn .35s cubic-bezier(.16,1,.3,1)}
+.view.visible{display:block}
+@keyframes viewIn{from{opacity:0;transform:translateY(10px) scale(.995)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+/* Dashboard */
+.dashboard-header{margin-bottom:32px;display:flex;align-items:flex-end;justify-content:space-between;background:url('/static/img/bg-hero.jpg') center/cover no-repeat;border-radius:var(--radius-xl);padding:40px 36px;position:relative;overflow:hidden}
+.dashboard-header::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(6,7,11,.85) 0%,rgba(6,7,11,.5) 50%,rgba(6,7,11,.7) 100%);z-index:0}
+.dashboard-header>*{position:relative;z-index:1}
+.dashboard-header h2{font-size:28px;font-weight:700;letter-spacing:-.3px;text-shadow:0 2px 20px rgba(0,0,0,.5)}
+.dashboard-header .subtitle{color:var(--text-2);font-size:13px;margin-top:4px}
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:32px}
+
+/* Stat cards — glassmorphism + animated gradient border on hover + orb backgrounds */
+.stat-card{background:var(--surface);-webkit-backdrop-filter:var(--glass);backdrop-filter:var(--glass);border:1px solid var(--border);border-radius:var(--radius-lg);padding:22px;position:relative;overflow:hidden;transition:all .3s cubic-bezier(.16,1,.3,1);cursor:pointer;background-size:120px;background-repeat:no-repeat;background-position:right -10px bottom -10px;background-blend-mode:screen}
+.stat-card.urgent{background-image:url('/static/img/stat-red.jpg')}.stat-card.warn{background-image:url('/static/img/stat-orange.jpg')}.stat-card.ok{background-image:url('/static/img/stat-green.jpg')}.stat-card:not(.urgent):not(.warn):not(.ok){background-image:url('/static/img/stat-blue.jpg')}
+.stat-card:hover{transform:translateY(-3px);box-shadow:0 12px 40px rgba(0,0,0,.3)}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;opacity:.8;transition:all .3s}
+.stat-card:hover::before{height:3px;opacity:1}
+.stat-card::after{content:'';position:absolute;inset:-1px;border-radius:var(--radius-lg);padding:1px;background:conic-gradient(from var(--card-angle,0deg),transparent 40%,var(--card-glow-color,var(--accent)) 50%,transparent 60%);-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:0;transition:opacity .4s;pointer-events:none}
+.stat-card:hover::after{opacity:1}
+.stat-card.urgent{--card-glow-color:var(--red)}.stat-card.warn{--card-glow-color:var(--orange)}.stat-card.ok{--card-glow-color:var(--green)}
+.stat-card.urgent::before{background:var(--red)}.stat-card.warn::before{background:var(--orange)}.stat-card.ok::before{background:var(--green)}
+.stat-card .stat-label{font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.8px;font-weight:600}
+.stat-card .stat-value{font-size:36px;font-weight:700;margin-top:6px;font-family:'JetBrains Mono',monospace;transition:all .3s}
+.stat-card.urgent .stat-value{color:var(--red)}.stat-card.warn .stat-value{color:var(--orange)}.stat-card.ok .stat-value{color:var(--green)}
+.stat-card:hover .stat-value{transform:scale(1.05);filter:brightness(1.2)}
+
+.section-title{font-size:13px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+
+/* Table — glow on hover */
+.data-table{width:100%;border-collapse:separate;border-spacing:0;margin-bottom:32px}
+.data-table th{text-align:left;font-size:10px;color:var(--text-3);font-weight:600;text-transform:uppercase;letter-spacing:.6px;padding:10px 14px;border-bottom:1px solid var(--border)}
+.data-table td{padding:12px 14px;font-size:13px;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:top}
+.data-table tbody tr{cursor:pointer;transition:all .2s;position:relative}
+.data-table tbody tr:hover{background:rgba(108,140,255,.04);box-shadow:inset 0 0 40px rgba(108,140,255,.02)}
+.data-table .file-no{font-family:'JetBrains Mono',monospace;color:var(--text-3);font-size:11px}
+.data-table .client{font-weight:600}
+.data-table .next-action{color:var(--text-2);max-width:400px}
+
+/* Urgency — pulsing overdue dots */
+.urgency-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px}
+.urgency-overdue{background:var(--red);box-shadow:0 0 8px var(--red-glow);animation:urgentPulse 2s ease-in-out infinite}
+@keyframes urgentPulse{0%,100%{box-shadow:0 0 8px var(--red-glow)}50%{box-shadow:0 0 16px rgba(255,90,106,.4)}}
+.urgency-thisweek{background:var(--orange);box-shadow:0 0 8px var(--orange-dim)}.urgency-thismonth{background:var(--yellow)}.urgency-later{background:var(--green)}.urgency-none{background:var(--text-3);opacity:.4}
+
+/* Detail */
+.detail-back{display:inline-flex;align-items:center;gap:8px;color:var(--text-3);font-size:13px;cursor:pointer;margin-bottom:24px;transition:all .25s;background:none;border:none;font-family:inherit;font-weight:500}
+.detail-back:hover{color:var(--accent);transform:translateX(-4px)}
+.detail-header{margin-bottom:28px;padding-bottom:24px;border-bottom:1px solid var(--border)}
+.detail-header .file-no{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-3);display:flex;align-items:center;gap:8px}
+.detail-header h2{font-size:26px;font-weight:700;margin-top:6px;letter-spacing:-.3px}
+.detail-header .description{color:var(--text-2);font-size:14px;margin-top:10px;line-height:1.7}
+.detail-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:24px}
+.meta-card{background:var(--surface);-webkit-backdrop-filter:var(--glass);backdrop-filter:var(--glass);border:1px solid var(--border);border-radius:var(--radius);padding:16px;transition:all .25s}
+.meta-card:hover{border-color:var(--border-light);transform:translateY(-1px);box-shadow:0 4px 20px rgba(0,0,0,.2)}
+.meta-card .meta-label{font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.6px;font-weight:600}
+.meta-card .meta-value{font-size:13px;color:var(--text);margin-top:6px;word-break:break-word}
+
+/* Panels — glass */
+.panel{background:var(--surface);-webkit-backdrop-filter:var(--glass);backdrop-filter:var(--glass);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:20px;transition:all .25s}
+.panel:hover{border-color:var(--border-light)}
+.panel .panel-label{font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.6px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.panel-warning{border-color:rgba(255,90,106,.3);background:rgba(255,90,106,.06);-webkit-backdrop-filter:var(--glass);backdrop-filter:var(--glass)}
+.panel-warning .panel-label{color:var(--red)}
+
+/* Forms */
+.form-row{display:flex;gap:8px;margin-bottom:8px;align-items:center}
+.form-label{font-size:12px;color:var(--text-3);min-width:110px;font-weight:500}
+.form-input{background:rgba(24,27,37,.6);border:1px solid var(--border);border-radius:var(--radius);padding:9px 14px;color:var(--text);font-family:inherit;font-size:13px;outline:none;flex:1;transition:all .3s}
+.form-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow),0 0 20px rgba(108,140,255,.06)}
+select.form-input{cursor:pointer}
+textarea.form-input{min-height:50px;resize:vertical}
+
+/* Buttons */
+.btn{background:rgba(24,27,37,.6);border:1px solid var(--border);border-radius:var(--radius);padding:7px 16px;color:var(--text-2);font-size:12px;font-family:inherit;cursor:pointer;transition:all .25s;font-weight:500;position:relative;overflow:hidden}
+.btn:hover{border-color:var(--border-light);color:var(--text);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.2)}
+.btn-primary{background:rgba(108,140,255,.12);border-color:rgba(108,140,255,.4);color:var(--accent-bright)}
+.btn-primary:hover{background:var(--accent);color:#fff;box-shadow:0 4px 24px var(--accent-glow),0 0 40px rgba(108,140,255,.15)}
+.btn-sm{padding:4px 10px;font-size:11px}
+.btn-danger{border-color:rgba(255,90,106,.3);color:var(--red)}.btn-danger:hover{background:var(--red-dim);border-color:var(--red);box-shadow:0 4px 16px var(--red-glow)}
+.btn-ghost{background:transparent;border:1px dashed var(--border);color:var(--text-3)}
+.btn-ghost:hover{border-color:var(--accent);border-style:solid;color:var(--accent-bright);box-shadow:0 0 20px rgba(108,140,255,.06)}
+
+/* Limitation bar — animated fill */
+.limit-bar{margin-top:12px}
+.limit-bar-track{height:6px;background:var(--surface-3);border-radius:3px;overflow:hidden}
+.limit-bar-fill{height:100%;border-radius:3px;transition:width .8s cubic-bezier(.16,1,.3,1);position:relative}
+.limit-bar-fill::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,.2) 50%,transparent 100%);animation:barShine 3s ease-in-out infinite}
+@keyframes barShine{0%{transform:translateX(-100%)}100%{transform:translateX(200%)}}
+.limit-bar-label{font-size:11px;margin-top:6px;font-weight:500}
+
+/* Deadline items */
+.dl-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:13px;transition:all .15s}
+.dl-item:hover{padding-left:4px}
+.dl-item:last-child{border-bottom:none}
+.dl-date{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-3);min-width:90px}
+.dl-desc{color:var(--text);font-weight:500;flex:1}
+.dl-source{color:var(--text-3);font-size:11px;font-style:italic}
+
+/* Timeline — animated line */
+.timeline{position:relative;padding-left:24px}
+.timeline::before{content:'';position:absolute;left:7px;top:0;bottom:0;width:1px;background:linear-gradient(to bottom,var(--accent),rgba(108,140,255,.2),transparent)}
+.timeline-entry{position:relative;padding:10px 0 10px 18px;font-size:13px;transition:all .2s}
+.timeline-entry:hover{transform:translateX(3px)}
+.timeline-entry::before{content:'';position:absolute;left:-20px;top:16px;width:8px;height:8px;border-radius:50%;background:var(--border-light);border:2px solid rgba(6,7,11,.8);transition:all .3s}
+.timeline-entry:first-child::before{background:var(--accent);box-shadow:0 0 12px var(--accent-glow)}
+.timeline-entry:hover::before{background:var(--accent);box-shadow:0 0 8px var(--accent-glow)}
+.timeline-entry .entry-date{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-3);margin-bottom:3px}
+.timeline-entry .entry-text{color:var(--text-2);line-height:1.6}
+.add-form{display:none;background:var(--surface);-webkit-backdrop-filter:var(--glass);backdrop-filter:var(--glass);border:1px solid rgba(108,140,255,.3);border-radius:var(--radius-lg);padding:18px;margin-bottom:16px;box-shadow:0 0 30px var(--accent-glow),0 8px 32px rgba(0,0,0,.3)}
+.add-form.visible{display:block;animation:formIn .25s cubic-bezier(.16,1,.3,1)}
+@keyframes formIn{from{opacity:0;transform:translateY(-8px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+/* Conflict */
+.conflict-hit{background:var(--surface);-webkit-backdrop-filter:var(--glass);backdrop-filter:var(--glass);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;margin-bottom:8px;cursor:pointer;transition:all .25s}
+.conflict-hit:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,0,0,.3),0 0 20px rgba(108,140,255,.06)}
+.conflict-hit .hit-file{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-3)}
+.conflict-hit .hit-client{font-weight:600;font-size:15px;margin-top:2px}
+.hit-loc-tag{display:inline-block;font-size:10px;padding:2px 8px;border-radius:10px;background:var(--yellow-dim);color:var(--yellow);margin-right:4px;margin-top:6px;font-weight:500}
+
+/* Toast — glass with progress bar */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface);-webkit-backdrop-filter:var(--glass);backdrop-filter:var(--glass);border:1px solid var(--green);color:var(--green);padding:12px 24px;border-radius:var(--radius);font-size:13px;font-weight:600;z-index:1000;opacity:0;transform:translateY(10px) scale(.95);transition:all .35s cubic-bezier(.16,1,.3,1);pointer-events:none;box-shadow:0 8px 32px var(--green-glow),0 0 60px rgba(61,214,140,.06);overflow:hidden}
+.toast::after{content:'';position:absolute;bottom:0;left:0;height:2px;background:var(--green);width:100%;animation:toastProgress 2s linear forwards;transform-origin:left}
+@keyframes toastProgress{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+.toast.show{opacity:1;transform:translateY(0) scale(1)}
+.toast.error{border-color:var(--red);color:var(--red);box-shadow:0 8px 32px var(--red-glow),0 0 60px rgba(255,90,106,.06)}
+.toast.error::after{background:var(--red)}
+
+/* Contact links */
+#contactDisplay a{color:var(--accent);text-decoration:none}
+#contactDisplay a:hover{text-decoration:underline}
+
+/* Type dropdown */
+.type-dropdown{position:absolute;z-index:200;background:var(--surface-2);border:1px solid var(--border-light);border-radius:var(--radius);padding:4px;box-shadow:var(--shadow-lg);min-width:180px;animation:formIn .2s cubic-bezier(.16,1,.3,1)}
+.type-dropdown-item{padding:8px 14px;font-size:13px;cursor:pointer;border-radius:6px;transition:all .15s;font-weight:500}
+.type-dropdown-item:hover{background:var(--accent-glow);color:var(--accent-bright)}
+
+/* New matter form */
+.new-matter-overlay{position:fixed;inset:0;z-index:300;background:rgba(6,7,11,.7);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;animation:viewIn .25s cubic-bezier(.16,1,.3,1)}
+.new-matter-card{background:var(--surface-2);border:1px solid var(--border-light);border-radius:var(--radius-xl);padding:32px;width:480px;max-width:90vw;box-shadow:var(--shadow-lg)}
+.new-matter-card h3{font-size:18px;font-weight:700;margin-bottom:20px;letter-spacing:-.2px}
+
+/* Folder suggestions */
+.folder-suggestion{display:inline-block;background:var(--accent-glow);border:1px solid rgba(108,140,255,.3);border-radius:20px;padding:4px 14px;font-size:12px;color:var(--accent-bright);cursor:pointer;transition:all .2s;font-weight:500}
+.folder-suggestion:hover{background:var(--accent);color:#fff;box-shadow:0 2px 12px var(--accent-glow)}
+
+/* Charts */
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:32px}
+.chart-card{background:var(--surface);-webkit-backdrop-filter:var(--glass);backdrop-filter:var(--glass);border:1px solid var(--border);border-radius:var(--radius-lg);padding:22px;transition:all .3s}
+.chart-card:hover{border-color:var(--border-light);box-shadow:0 8px 32px rgba(0,0,0,.3)}
+.chart-card .chart-title{font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.8px;font-weight:600;margin-bottom:16px}
+.chart-card canvas{width:100%;display:block}
+
+/* Loading skeleton */
+.skeleton{background:linear-gradient(90deg,var(--surface-3) 25%,rgba(42,47,63,.6) 50%,var(--surface-3) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:var(--radius)}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* Conflict check header */
+.conflict-header-banner{background:url('/static/img/conflict-header.jpg') center/cover no-repeat;border-radius:var(--radius-xl);padding:36px;position:relative;overflow:hidden;margin-bottom:24px}
+.conflict-header-banner::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(6,7,11,.88) 0%,rgba(6,7,11,.4) 60%,rgba(6,7,11,.7) 100%)}
+.conflict-header-banner>*{position:relative;z-index:1}
+
+/* Timeline section background — full-height stream on the left */
+.timeline-section-wrap{position:relative;padding-left:60px}
+.timeline-section-wrap::before{content:'';position:absolute;left:0;top:0;bottom:0;width:50px;background:url('/static/img/timeline-bg.jpg') center top/50px auto repeat-y;opacity:.3;pointer-events:none;border-radius:var(--radius-lg) 0 0 var(--radius-lg);mask-image:linear-gradient(to bottom,transparent 0%,black 5%,black 95%,transparent 100%);-webkit-mask-image:linear-gradient(to bottom,transparent 0%,black 5%,black 95%,transparent 100%)}
+
+/* Empty state */
+.empty-state{display:flex;flex-direction:column;align-items:center;padding:60px 20px;text-align:center}
+.empty-state img{width:180px;height:180px;object-fit:contain;opacity:.7;margin-bottom:20px;filter:drop-shadow(0 0 30px rgba(108,140,255,.2))}
+.empty-state p{color:var(--text-3);font-size:14px}
+
+/* Limitation warning image */
+.limit-panel-img{position:absolute;right:16px;top:50%;transform:translateY(-50%);width:100px;height:auto;opacity:.25;pointer-events:none;filter:saturate(1.2)}
+
+/* Matter closed toast image */
+.matter-closed-img{width:80px;height:auto;margin-bottom:8px;filter:drop-shadow(0 0 20px rgba(61,214,140,.3))}
+
+/* Splash screen */
+.splash-overlay{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;transition:opacity .6s ease,visibility .6s ease}
+.splash-overlay.hide{opacity:0;visibility:hidden;pointer-events:none}
+.splash-overlay img{width:420px;max-width:80vw;border-radius:var(--radius-xl);box-shadow:0 0 80px rgba(108,140,255,.15),0 0 200px rgba(160,124,255,.08);animation:splashPulse 2s ease-in-out infinite alternate}
+.splash-overlay .splash-text{margin-top:24px;font-size:16px;font-weight:600;background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:.5px;animation:gradientText 4s ease infinite}
+.splash-overlay .splash-sub{margin-top:6px;font-size:12px;color:var(--text-3);letter-spacing:1px}
+@keyframes splashPulse{0%{box-shadow:0 0 80px rgba(108,140,255,.15),0 0 200px rgba(160,124,255,.08)}100%{box-shadow:0 0 100px rgba(108,140,255,.25),0 0 250px rgba(160,124,255,.12)}}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:3px}::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.14)}
+</style>
+</head>
+<body>
+<div class="splash-overlay" id="splashScreen">
+  <img src="/static/img/splash.jpg" alt="My Firm">
+  <div class="splash-text">My Firm</div>
+  <div class="splash-sub">MATTER TRACKER</div>
+</div>
+<div class="app">
+  <aside class="sidebar">
+    <div class="sidebar-brand" onclick="switchView('dashboard')" style="cursor:pointer" title="Back to Dashboard">
+      <img src="/logo.png" alt="My Firm">
+      <div class="sidebar-brand-text">
+        <h1>My Firm</h1>
+        <div class="firm">Matter Tracker</div>
+      </div>
+    </div>
+    <div class="sidebar-search"><input type="text" id="searchInput" placeholder="Search matters... (Ctrl+K)" autocomplete="off"></div>
+    <div class="sidebar-nav">
+      <button class="nav-btn active" data-view="dashboard">Dashboard</button>
+      <button class="nav-btn" data-view="conflicts">Conflicts</button>
+    </div>
+    <div class="sidebar-filters" id="filterBtns">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="open">Open</button>
+      <button class="filter-btn" data-filter="closed">Closed</button>
+      <button class="filter-btn" data-filter="SCC">SCC</button>
+      <button class="filter-btn" data-filter="Transactional">Txn</button>
+      <button class="filter-btn" data-filter="Corporate">Corp</button>
+      <button class="filter-btn" data-filter="Employment">Emp</button>
+      <button class="filter-btn" data-filter="Demand/Recovery">Demand</button>
+    </div>
+    <div class="matter-list" id="matterList"></div>
+    <div style="padding:8px 16px"><button class="btn btn-primary" style="width:100%" onclick="showNewMatterForm()">+ New Matter</button></div>
+    <div class="sidebar-footer"><span class="dot"></span> <span id="matterCount">-</span> matters</div>
+  </aside>
+  <div class="main">
+    <div class="view visible" id="dashboardView">
+      <div class="dashboard-header">
+        <div><h2>Dashboard</h2><div class="subtitle" id="dashDate"></div></div>
+      </div>
+      <div class="stats-row" id="statsRow"></div>
+      <div class="charts-row" id="chartsRow">
+        <div class="chart-card"><div class="chart-title">Open Matters by Type</div><canvas id="typeChart" height="200"></canvas></div>
+        <div class="chart-card"><div class="chart-title">Monthly Intake (Last 6 Months)</div><canvas id="intakeChart" height="200"></canvas></div>
+      </div>
+      <div class="section-title" style="margin-top:8px">Firm Activity</div>
+      <div class="charts-row" id="activityChartsRow">
+        <div class="chart-card"><div class="chart-title">Weekly Activity <span style="font-weight:400;text-transform:none;letter-spacing:0">(last 12 weeks)</span></div><canvas id="activityChart" height="200"></canvas></div>
+        <div class="chart-card"><div class="chart-title">Avg. Days Open by Matter Type</div><canvas id="lifecycleChart" height="200"></canvas></div>
+      </div>
+      <div id="drilldownSection" style="display:none;margin-bottom:32px">
+        <div class="section-title"><span id="drilldownTitle"></span><button class="btn btn-sm" onclick="closeDrilldown()">&#10005; Close</button></div>
+        <table class="data-table"><thead><tr><th style="width:30px"></th><th>File</th><th>Client</th><th>Type</th><th>Detail</th><th>Urgency</th></tr></thead><tbody id="drilldownBody"></tbody></table>
+      </div>
+      <div style="position:relative;overflow:hidden;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px 24px 20px 140px;margin-bottom:16px"><img src="/static/img/deadline-alert.jpg" style="position:absolute;left:-10px;top:50%;transform:translateY(-50%);width:120px;opacity:.35;border-radius:10px;pointer-events:none"><div class="section-title" style="margin-bottom:0;border-bottom:none;padding-bottom:0">Upcoming Deadlines & Next Actions</div></div>
+      <table class="data-table"><thead><tr><th style="width:30px"></th><th>File</th><th>Client</th><th>Type</th><th>Next Action / Deadline</th><th>Last Activity</th></tr></thead><tbody id="deadlineBody"></tbody></table>
+    </div>
+    <div class="view" id="conflictView">
+      <div class="conflict-header-banner">
+        <h2 style="font-size:24px;font-weight:700;margin-bottom:8px;letter-spacing:-.3px;text-shadow:0 2px 16px rgba(0,0,0,.5)">Conflict Check</h2>
+        <p style="color:var(--text-2);font-size:13px;margin-bottom:20px">Search all matters (open & closed) for potential conflicts. Separate multiple names with commas.</p>
+        <div class="form-row"><input type="text" class="form-input" id="conflictInput" placeholder="e.g. Salimi, Proxy Real Property, Hossain" style="flex:1"><button class="btn btn-primary" onclick="runConflictCheck()">Run Check</button></div>
+      </div>
+      <div id="conflictResults" style="margin-top:16px"></div>
+    </div>
+    <div class="view" id="detailView">
+      <button class="detail-back" onclick="goBack()">&#8592; Back</button>
+      <div id="detailHeader" class="detail-header"></div>
+      <div id="detailMeta" class="detail-meta"></div>
+      <div id="folderPanel"></div>
+      <div id="contactPanel" class="panel"></div>
+      <div id="limitationPanel"></div>
+      <div id="courtDeadlinesPanel"></div>
+      <div id="nextActionPanel" class="panel"></div>
+      <div id="timelineSection"></div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+let matters=[],currentFilter='all',currentSearch='',activeMatter=null,currentView='dashboard',previousView='dashboard',statutes={},firstLoad=true;
+const today=new Date();today.setHours(0,0,0,0);
+const daysBetween=ds=>{if(!ds)return null;return Math.floor((new Date(ds+'T00:00:00')-today)/864e5)};
+const urgencyClass=d=>{if(d===null)return'none';if(d<0)return'overdue';if(d<=7)return'thisweek';if(d<=30)return'thismonth';return'later'};
+const urgencyLabel=d=>{if(d===null)return'';if(d<0)return Math.abs(d)+'d overdue';if(d===0)return'Today';if(d===1)return'Tomorrow';return d+'d'};
+const fmtDate=d=>d||'\u2014';
+const esc=s=>{const d=document.createElement('div');d.textContent=s;return d.innerHTML};
+const escAttr=s=>String(s).replace(/&/g,'&amp;').replace(/'/g,'&#39;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const encFileNo=fn=>encodeURIComponent(fn);
+const showToast=(msg,isError=false)=>{const t=document.getElementById('toast');t.textContent=msg;t.classList.toggle('error',isError);t.classList.add('show');setTimeout(()=>{t.classList.remove('show');t.classList.remove('error');},isError?4000:2000)};
+async function safeFetch(url,options){try{const res=await fetch(url,options);if(!res.ok){let msg='Save failed';try{const d=await res.json();msg=d.error||msg;}catch(e){}showToast(msg,true);return null;}return await res.json();}catch(e){showToast('Connection error \u2014 changes not saved',true);return null;}}
+
+async function loadMatters(){
+  try{
+    const[mR,sR]=await Promise.all([fetch('/api/matters'),fetch('/api/statutes')]);
+    const mData=await mR.json();
+    if(Array.isArray(mData)){matters=mData;}else{showToast(mData.error||'Failed to load matters');matters=[];}
+    statutes=await sR.json();
+  }catch(e){showToast('Connection error');matters=[];}
+  render();
+}
+
+function filterMatters(){
+  let f=matters;
+  if(currentFilter==='open')f=f.filter(m=>m.status==='Open');
+  else if(currentFilter==='closed')f=f.filter(m=>m.status!=='Open');
+  else if(currentFilter!=='all')f=f.filter(m=>m.matter_type===currentFilter);
+  if(currentSearch){const q=currentSearch.toLowerCase();f=f.filter(m=>m.client.toLowerCase().includes(q)||m.file_no.toLowerCase().includes(q)||m.description.toLowerCase().includes(q)||m.opposing.toLowerCase().includes(q)||m.timeline_raw.toLowerCase().includes(q)||m.next_action.toLowerCase().includes(q)||(m.other_parties||'').toLowerCase().includes(q)||(m.client_email||'').toLowerCase().includes(q)||(m.client_phone||'').toLowerCase().includes(q));}
+  return f;
+}
+
+function render(){renderSidebar();renderDashboard();document.getElementById('dashDate').textContent=today.toLocaleDateString('en-CA',{weekday:'long',year:'numeric',month:'long',day:'numeric'});}
+
+function renderSidebar(){
+  const filtered=filterMatters();
+  filtered.sort((a,b)=>{if(a.status==='Open'&&b.status!=='Open')return-1;if(a.status!=='Open'&&b.status==='Open')return 1;return(b.last_activity||'').localeCompare(a.last_activity||'');});
+  if(filtered.length===0&&(currentSearch||currentFilter!=='all')){
+    document.getElementById('matterList').innerHTML=`<div class="empty-state"><img src="/static/img/empty-state.jpg" alt="No results"><p>No matters found</p></div>`;
+  }else{
+    document.getElementById('matterList').innerHTML=filtered.map(m=>`<div class="matter-item ${m.status!=='Open'?'closed-matter':''} ${activeMatter?.file_no===m.file_no?'active':''}" onclick="showMatter('${escAttr(m.file_no)}')"><div class="file-no">${esc(m.file_no)}</div><div class="client-name">${esc(m.client)}</div><span class="matter-type-tag tag-${m.matter_type}">${m.matter_type}</span></div>`).join('');
+  }
+  document.getElementById('matterCount').textContent=filtered.length;
+}
+
+function renderDashboard(){
+  const open=matters.filter(m=>m.status==='Open');
+  const overdue=open.filter(m=>{const d=daysBetween(m.earliest_deadline);return d!==null&&d<0}).length;
+  const thisWeek=open.filter(m=>{const d=daysBetween(m.earliest_deadline);return d!==null&&d>=0&&d<=7}).length;
+  const courtDlCount=open.reduce((n,m)=>n+(m.court_deadlines||[]).filter(cd=>{const d=daysBetween(cd.date);return d!==null&&d>=0&&d<=30}).length,0);
+
+  document.getElementById('statsRow').innerHTML=`
+    <div class="stat-card urgent" onclick="drilldown('overdue')"><div class="stat-label">Overdue</div><div class="stat-value">${overdue}</div></div>
+    <div class="stat-card warn" onclick="drilldown('thisweek')"><div class="stat-label">Due This Week</div><div class="stat-value">${thisWeek}</div></div>
+    <div class="stat-card" onclick="drilldown('open')"><div class="stat-label">Open Matters</div><div class="stat-value" style="color:var(--text)">${open.length}</div></div>
+    <div class="stat-card ${courtDlCount?'warn':'ok'}" onclick="drilldown('court30')"><div class="stat-label">Court Deadlines \u226430d</div><div class="stat-value">${courtDlCount}</div></div>`;
+
+  if(firstLoad){requestAnimationFrame(animateCountUp);firstLoad=false;}
+  requestAnimationFrame(()=>{renderTypeChart();renderIntakeChart();renderActivityChart();renderLifecycleChart();});
+
+  const sorted=[...open].sort((a,b)=>{const da=daysBetween(a.earliest_deadline),db=daysBetween(b.earliest_deadline);if(da===null&&db===null)return 0;if(da===null)return 1;if(db===null)return-1;return da-db;});
+  document.getElementById('deadlineBody').innerHTML=sorted.map(m=>{
+    const days=daysBetween(m.earliest_deadline);
+    return`<tr onclick="showMatter('${escAttr(m.file_no)}')"><td><span class="urgency-dot urgency-${urgencyClass(days)}" title="${urgencyLabel(days)}"></span></td><td class="file-no">${esc(m.file_no)}</td><td class="client">${esc(m.client)}</td><td><span class="tag tag-${m.matter_type}">${m.matter_type}</span></td><td class="next-action">${esc(m.next_action)}</td><td style="color:var(--text-3);font-size:12px">${fmtDate(m.last_activity)}</td></tr>`;
+  }).join('');
+}
+
+function drilldown(type){
+  const open=matters.filter(m=>m.status==='Open');
+  let title='',items=[];
+  if(type==='overdue'){
+    title='Overdue Matters';
+    items=open.filter(m=>{const d=daysBetween(m.earliest_deadline);return d!==null&&d<0})
+      .map(m=>({m,days:daysBetween(m.earliest_deadline),detail:m.next_action||'\u2014'}));
+  }else if(type==='thisweek'){
+    title='Due This Week';
+    items=open.filter(m=>{const d=daysBetween(m.earliest_deadline);return d!==null&&d>=0&&d<=7})
+      .map(m=>({m,days:daysBetween(m.earliest_deadline),detail:m.next_action||'\u2014'}));
+  }else if(type==='open'){
+    title='All Open Matters';
+    items=open.map(m=>({m,days:daysBetween(m.earliest_deadline),detail:m.description||'\u2014'}));
+  }else if(type==='court30'){
+    title='Court Deadlines Within 30 Days';
+    // Flatten: one row per court deadline
+    items=[];
+    open.forEach(m=>{
+      (m.court_deadlines||[]).forEach(cd=>{
+        const d=daysBetween(cd.date);
+        if(d!==null&&d>=0&&d<=30) items.push({m,days:d,detail:cd.description+(cd.source?' ('+cd.source+')':'')});
+      });
+    });
+  }
+  items.sort((a,b)=>{if(a.days===null&&b.days===null)return 0;if(a.days===null)return 1;if(b.days===null)return-1;return a.days-b.days;});
+  document.getElementById('drilldownTitle').textContent=title+' ('+items.length+')';
+  document.getElementById('drilldownBody').innerHTML=items.map(({m,days,detail})=>
+    `<tr onclick="showMatter('${escAttr(m.file_no)}')"><td><span class="urgency-dot urgency-${urgencyClass(days)}"></span></td><td class="file-no">${esc(m.file_no)}</td><td class="client">${esc(m.client)}</td><td><span class="tag tag-${m.matter_type}">${m.matter_type}</span></td><td class="next-action">${esc(detail)}</td><td style="color:${days<0?'var(--red)':days<=7?'var(--orange)':'var(--text-3)'};font-size:12px;font-weight:600">${urgencyLabel(days)}</td></tr>`
+  ).join('')||'<tr><td colspan="6" style="color:var(--text-3);text-align:center;padding:20px">None</td></tr>';
+  document.getElementById('drilldownSection').style.display='block';
+  document.getElementById('drilldownSection').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function closeDrilldown(){document.getElementById('drilldownSection').style.display='none';}
+
+function switchView(view){previousView=currentView;currentView=view;document.querySelectorAll('.view').forEach(v=>v.classList.remove('visible'));document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));if(view==='dashboard'){document.getElementById('dashboardView').classList.add('visible');document.querySelector('[data-view="dashboard"]').classList.add('active');activeMatter=null;}else if(view==='conflicts'){document.getElementById('conflictView').classList.add('visible');document.querySelector('[data-view="conflicts"]').classList.add('active');activeMatter=null;setTimeout(()=>document.getElementById('conflictInput').focus(),100);}else if(view==='detail'){document.getElementById('detailView').classList.add('visible');}renderSidebar();}
+
+function goBack(){switchView(previousView==='detail'?'dashboard':previousView);}
+
+// --- Matter Type Dropdown ---
+function showTypeDropdown(event,fileNo){
+  event.stopPropagation();
+  const existing=document.querySelector('.type-dropdown');if(existing)existing.remove();
+  const tag=event.currentTarget;const rect=tag.getBoundingClientRect();
+  const types=['SCC','Employment','Demand/Recovery','Corporate','Transactional','Other','Auto-detect'];
+  const dd=document.createElement('div');dd.className='type-dropdown';
+  dd.style.top=(rect.bottom+4)+'px';dd.style.left=rect.left+'px';dd.style.position='fixed';
+  types.forEach(t=>{
+    const item=document.createElement('div');item.className='type-dropdown-item';
+    item.textContent=t;
+    if(t==='Auto-detect')item.style.cssText='color:var(--text-3);font-style:italic;border-top:1px solid var(--border);margin-top:4px;padding-top:12px';
+    item.onclick=async()=>{dd.remove();
+      const r=await safeFetch(`/api/matters/${encFileNo(fileNo)}/type`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:t==='Auto-detect'?'':t})});
+      if(!r)return;showToast(t==='Auto-detect'?'Type set to auto-detect':'Type set to '+t);await loadMatters();showMatter(fileNo);
+    };
+    dd.appendChild(item);
+  });
+  document.body.appendChild(dd);
+  const dismiss=e=>{if(!dd.contains(e.target)){dd.remove();document.removeEventListener('click',dismiss);}};
+  setTimeout(()=>document.addEventListener('click',dismiss),0);
+}
+
+// --- Close / Reopen Matter ---
+async function closeMatter(fn){
+  if(!confirm('Close this matter? It will be moved to Closed Matters.'))return;
+  const r=await safeFetch(`/api/matters/${encFileNo(fn)}/close`,{method:'POST',headers:{'Content-Type':'application/json'}});
+  if(!r)return;showClosedCelebration();await loadMatters();showMatter(fn);
+}
+async function reopenMatter(fn){
+  if(!confirm('Reopen this matter?'))return;
+  const r=await safeFetch(`/api/matters/${encFileNo(fn)}/reopen`,{method:'POST',headers:{'Content-Type':'application/json'}});
+  if(!r)return;showToast('Matter reopened');await loadMatters();showMatter(fn);
+}
+
+// --- New Matter ---
+function showNewMatterForm(){
+  const overlay=document.createElement('div');overlay.className='new-matter-overlay';overlay.id='newMatterOverlay';
+  overlay.onclick=e=>{if(e.target===overlay)overlay.remove();};
+  overlay.innerHTML=`<div class="new-matter-card" style="position:relative;overflow:hidden">
+    <img src="/static/img/new-matter-success.jpg" style="position:absolute;right:-20px;top:-20px;width:140px;opacity:.15;border-radius:12px;pointer-events:none;filter:saturate(1.3)">
+    <h3 style="position:relative;z-index:1">New Matter</h3>
+    <div class="form-row"><span class="form-label">Client Name</span><input class="form-input" id="nmClient" placeholder="Required"></div>
+    <div class="form-row"><span class="form-label">Description</span><input class="form-input" id="nmDesc" placeholder="Required"></div>
+    <div class="form-row"><span class="form-label">Opposing Party</span><input class="form-input" id="nmOpposing" placeholder="Optional"></div>
+    <div class="form-row"><span class="form-label">Client Email</span><input class="form-input" id="nmEmail" placeholder="Optional"></div>
+    <div class="form-row"><span class="form-label">Client Phone</span><input class="form-input" id="nmPhone" placeholder="Optional"></div>
+    <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn" onclick="document.getElementById('newMatterOverlay').remove()">Cancel</button>
+      <button class="btn btn-primary" onclick="createMatter()">Create Matter</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+  setTimeout(()=>document.getElementById('nmClient').focus(),100);
+}
+async function createMatter(){
+  const client=document.getElementById('nmClient').value.trim();
+  const desc=document.getElementById('nmDesc').value.trim();
+  if(!client||!desc){showToast('Client name and description are required',true);return;}
+  const r=await safeFetch('/api/matters/new',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+    client_name:client,description:desc,
+    opposing:document.getElementById('nmOpposing').value.trim(),
+    email:document.getElementById('nmEmail').value.trim(),
+    phone:document.getElementById('nmPhone').value.trim()
+  })});
+  if(!r)return;
+  document.getElementById('newMatterOverlay').remove();
+  showToast('Matter '+r.file_no+' created');await loadMatters();showMatter(r.file_no);
+}
+
+function showMatter(fileNo){
+  const m=matters.find(x=>x.file_no===fileNo);if(!m)return;
+  activeMatter=m;switchView('detail');
+
+  document.getElementById('detailHeader').innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <div class="file-no">${esc(m.file_no)} <span class="tag tag-${m.matter_type}" style="cursor:pointer;position:relative" onclick="showTypeDropdown(event,'${escAttr(m.file_no)}')" title="Click to change type">${m.matter_type} &#9662;</span> <span style="color:${m.status==='Open'?'var(--green)':'var(--text-3)'}">${m.status}</span></div>
+        <h2>${esc(m.client)}</h2>
+        <div class="description">${esc(m.description)}</div>
+      </div>
+      <div style="flex-shrink:0;margin-left:16px;margin-top:4px">
+        ${m.status==='Open'?`<button class="btn btn-danger" onclick="closeMatter('${escAttr(m.file_no)}')">Close Matter</button>`:`<button class="btn btn-primary" onclick="reopenMatter('${escAttr(m.file_no)}')">Reopen Matter</button>`}
+      </div>
+    </div>`;
+
+  document.getElementById('detailMeta').innerHTML=`
+    <div class="meta-card"><div class="meta-label">Date Opened</div><div class="meta-value">${fmtDate(m.date_opened)}</div></div>
+    <div class="meta-card"><div class="meta-label">Last Activity</div><div class="meta-value">${fmtDate(m.last_activity)}</div></div>
+    <div class="meta-card"><div class="meta-label">Opposing Party</div><div class="meta-value">${esc(m.opposing||'\u2014')}</div></div>
+    <div class="meta-card"><div class="meta-label">ID / Conflict</div><div class="meta-value">${m.id_verified||'\u2014'} / ${m.conflict_check||'\u2014'}</div></div>
+    ${m.other_parties?`<div class="meta-card"><div class="meta-label">Other Parties / Related</div><div class="meta-value" style="white-space:pre-line">${esc(m.other_parties)}</div></div>`:''}
+    ${m.date_closed?`<div class="meta-card"><div class="meta-label">Date Closed</div><div class="meta-value">${fmtDate(m.date_closed)}</div></div>`:''}`;
+
+  renderFolderPanel(m);
+  renderContactPanel(m);
+  renderLimitationPanel(m);
+  renderCourtDeadlinesPanel(m);
+  renderNextActionPanel(m);
+  renderTimeline(m);
+  renderSidebar();
+}
+
+// --- Matter Folder ---
+function renderFolderPanel(m){
+  const el=document.getElementById('folderPanel');
+  if(!m.matter_folder){
+    el.innerHTML=`<div style="margin-bottom:16px">
+      <button class="btn btn-ghost" onclick="editFolder()">+ Link matter folder</button>
+      <div id="folderSuggestions"></div>
+      <div class="add-form" id="folderEditForm">
+        <div class="form-row"><span class="form-label">Folder Name</span><input class="form-input" id="folderInput" placeholder="e.g. Smith, J."></div>
+        <p style="font-size:11px;color:var(--text-3);margin:4px 0 0 118px">Subfolder name inside Open Files</p>
+        <div style="margin-top:8px"><button class="btn btn-primary" onclick="saveFolder('${escAttr(m.file_no)}')">Save</button> <button class="btn" onclick="renderFolderPanel(activeMatter)">Cancel</button></div>
+      </div>
+    </div>`;
+    fetchFolderSuggestions(m.file_no);
+    return;
+  }
+  el.innerHTML=`<div class="panel" style="padding:14px 20px;display:flex;align-items:center;justify-content:space-between">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="color:var(--text-3);font-size:10px;text-transform:uppercase;letter-spacing:.6px;font-weight:600">Matter Folder</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-2)">Open Files/${esc(m.matter_folder)}</span>
+    </div>
+    <div style="display:flex;gap:6px">
+      <button class="btn btn-primary btn-sm" onclick="openFolder('${escAttr(m.file_no)}')">Open in Finder</button>
+      <button class="btn btn-sm" onclick="editFolderExisting()">Edit</button>
+    </div>
+  </div>
+  <div class="add-form" id="folderEditForm" style="margin-bottom:16px">
+    <div class="form-row"><span class="form-label">Folder Name</span><input class="form-input" id="folderInput" value="${esc(m.matter_folder)}"></div>
+    <p style="font-size:11px;color:var(--text-3);margin:4px 0 0 118px">Subfolder name inside Open Files</p>
+    <div style="margin-top:8px"><button class="btn btn-primary" onclick="saveFolder('${escAttr(m.file_no)}')">Save</button> <button class="btn" onclick="renderFolderPanel(activeMatter)">Cancel</button> <button class="btn btn-danger btn-sm" onclick="clearFolder('${escAttr(m.file_no)}')" style="margin-left:auto">Remove</button></div>
+  </div>`;
+}
+function editFolder(){document.getElementById('folderEditForm').classList.add('visible');}
+function editFolderExisting(){document.getElementById('folderEditForm').classList.add('visible');}
+async function fetchFolderSuggestions(fileNo){
+  try{
+    const res=await fetch(`/api/matters/${encFileNo(fileNo)}/folder/suggest`);
+    if(!res.ok)return;
+    const data=await res.json();
+    const el=document.getElementById('folderSuggestions');
+    if(!el||!data.suggestions||!data.suggestions.length)return;
+    el.innerHTML=`<div style="margin-top:8px"><span style="font-size:11px;color:var(--text-3)">Suggested folders:</span><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">${data.suggestions.map(s=>`<span class="folder-suggestion" onclick="linkSuggestedFolder('${escAttr(fileNo)}','${escAttr(s.folder_name)}')">${esc(s.folder_name)}</span>`).join('')}</div></div>`;
+  }catch(e){}
+}
+async function linkSuggestedFolder(fn,folderName){
+  const r=await safeFetch(`/api/matters/${encFileNo(fn)}/folder`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:folderName})});
+  if(!r)return;showToast('Folder linked');await loadMatters();showMatter(fn);
+}
+async function saveFolder(fn){
+  const path=document.getElementById('folderInput').value.trim();if(!path)return;
+  const r=await safeFetch(`/api/matters/${encFileNo(fn)}/folder`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path})});
+  if(!r)return;showToast('Folder linked');await loadMatters();showMatter(fn);
+}
+async function clearFolder(fn){
+  const r=await safeFetch(`/api/matters/${encFileNo(fn)}/folder`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:''})});
+  if(!r)return;showToast('Folder removed');await loadMatters();showMatter(fn);
+}
+async function openFolder(fn){
+  const res=await fetch(`/api/matters/${encFileNo(fn)}/folder/open`,{method:'POST',headers:{'Content-Type':'application/json'}});
+  if(!res.ok){const d=await res.json();showToast(d.error||'Could not open folder');}
+}
+
+// --- Contact ---
+function renderContactPanel(m){
+  document.getElementById('contactPanel').innerHTML=`
+    <div class="panel-label">Client Contact</div>
+    <div id="contactDisplay">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;font-size:13px">
+        <div><span style="color:var(--text-3);font-size:10px;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Email</span>${m.client_email?'<a href="mailto:'+escAttr(m.client_email)+'">'+esc(m.client_email)+'</a>':'\u2014'}</div>
+        <div><span style="color:var(--text-3);font-size:10px;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Phone</span>${m.client_phone?'<a href="tel:'+escAttr(m.client_phone)+'">'+esc(m.client_phone)+'</a>':'\u2014'}</div>
+        <div><span style="color:var(--text-3);font-size:10px;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Address</span>${esc(m.client_address||'\u2014')}</div>
+      </div>
+      ${m.other_parties?`<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)"><span style="color:var(--text-3);font-size:10px;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Other Parties / Related Persons</span><div style="font-size:13px;line-height:1.7;white-space:pre-line">${esc(m.other_parties)}</div></div>`:''}
+      <button class="btn" style="margin-top:12px" onclick="editContact()">Edit</button>
+    </div>
+    <div id="contactEdit" style="display:none">
+      <div class="form-row"><span class="form-label">Email</span><input class="form-input" id="ceEmail" value="${esc(m.client_email||'')}"></div>
+      <div class="form-row"><span class="form-label">Phone</span><input class="form-input" id="cePhone" value="${esc(m.client_phone||'')}"></div>
+      <div class="form-row"><span class="form-label">Address</span><input class="form-input" id="ceAddress" value="${esc(m.client_address||'')}"></div>
+      <div class="form-row"><span class="form-label">Other Parties</span><textarea class="form-input" id="ceOtherParties" placeholder="e.g. spouse, guarantor, co-defendant (one per line)">${esc(m.other_parties||'')}</textarea></div>
+      <div style="margin-top:10px"><button class="btn btn-primary" onclick="saveContact('${escAttr(m.file_no)}')">Save</button> <button class="btn" onclick="renderContactPanel(activeMatter)">Cancel</button></div>
+    </div>`;
+}
+function editContact(){document.getElementById('contactDisplay').style.display='none';document.getElementById('contactEdit').style.display='block';}
+async function saveContact(fn){
+  const r=await safeFetch(`/api/matters/${encFileNo(fn)}/contact`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:document.getElementById('ceEmail').value,phone:document.getElementById('cePhone').value,address:document.getElementById('ceAddress').value,other_parties:document.getElementById('ceOtherParties').value})});
+  if(!r)return;showToast('Contact updated');await loadMatters();showMatter(fn);
+}
+
+// --- Limitation ---
+function renderLimitationPanel(m){
+  const el=document.getElementById('limitationPanel');
+  if(!m.has_limitation){
+    el.innerHTML=`<div style="margin-bottom:20px"><button class="btn btn-ghost" onclick="enableLimitation()">+ Track limitation period</button></div>`;
+    return;
+  }
+  const daysLeft=m.limitation_deadline?daysBetween(m.limitation_deadline):null;
+  const isUrgent=daysLeft!==null&&daysLeft<=180;
+  const isExpired=daysLeft!==null&&daysLeft<0;
+  let barHtml='';
+  if(m.limitation_deadline&&m.discovery_date){
+    const totalDays=Math.max(1,Math.floor((new Date(m.limitation_deadline+'T00:00:00')-new Date(m.discovery_date+'T00:00:00'))/864e5));
+    const elapsed=totalDays-(daysLeft||0);
+    const pct=Math.min(100,Math.max(0,(elapsed/totalDays)*100));
+    const color=isExpired?'var(--red)':isUrgent?'var(--orange)':'var(--green)';
+    barHtml=`<div class="limit-bar"><div class="limit-bar-track"><div class="limit-bar-fill" style="width:${pct}%;background:${color}"></div></div><div class="limit-bar-label" style="color:${color}">${isExpired?'EXPIRED':daysLeft+' days remaining'} \u00B7 Expires ${m.limitation_deadline}</div></div>`;
+  }
+  const statuteOptions=Object.entries(statutes).map(([k,v])=>`<option value="${k}" ${m.limitation_statute===k?'selected':''}>${esc(v.name)}</option>`).join('');
+  el.innerHTML=`
+    <div class="panel ${isExpired?'panel-warning':''}" style="position:relative;overflow:hidden">
+      ${isExpired||isUrgent?'<img src="/static/img/limitation-warning.jpg" class="limit-panel-img">':''}
+      <div class="panel-label">Limitation Period</div>
+      <div id="limitDisplay">
+        ${m.limitation_deadline?`<div style="font-size:14px;font-weight:600;color:${isExpired?'var(--red)':isUrgent?'var(--orange)':'var(--text)'}">${statutes[m.limitation_statute]?.name||m.limitation_statute||'Custom'}</div>
+        <div style="font-size:13px;color:var(--text-2);margin-top:4px">Discovery: ${m.discovery_date||'\u2014'} \u00B7 Deadline: ${m.limitation_deadline}</div>${barHtml}`
+        :`<div style="color:var(--text-3);font-size:13px">Limitation tracking enabled \u2014 enter dates below</div>`}
+        <div style="margin-top:12px"><button class="btn" onclick="editLimitation()">Edit</button> <button class="btn btn-sm btn-danger" onclick="clearLimitation('${escAttr(m.file_no)}')">Remove</button></div>
+      </div>
+      <div id="limitEdit" style="display:none">
+        <div class="form-row"><span class="form-label">Discovery Date</span><input type="date" class="form-input" id="leDiscovery" value="${m.discovery_date||''}"></div>
+        <div class="form-row"><span class="form-label">Statute</span><select class="form-input" id="leStatute">${statuteOptions}</select></div>
+        <div class="form-row"><span class="form-label">Manual Deadline</span><input type="date" class="form-input" id="leDeadline" value="" placeholder="Leave blank to auto-calculate"></div>
+        <p style="font-size:11px;color:var(--text-3);margin:4px 0 0 118px">Leave blank to auto-calculate from discovery + statute</p>
+        <div style="margin-top:10px"><button class="btn btn-primary" onclick="saveLimitation('${escAttr(m.file_no)}')">Save</button> <button class="btn" onclick="renderLimitationPanel(activeMatter)">Cancel</button></div>
+      </div>
+    </div>`;
+}
+function enableLimitation(){
+  const el=document.getElementById('limitationPanel');
+  const statuteOptions=Object.entries(statutes).map(([k,v])=>`<option value="${k}">${esc(v.name)}</option>`).join('');
+  el.innerHTML=`
+    <div class="panel" style="border-color:rgba(108,140,255,.4)">
+      <div class="panel-label">Limitation Period</div>
+      <div class="form-row"><span class="form-label">Discovery Date</span><input type="date" class="form-input" id="leDiscovery" value=""></div>
+      <div class="form-row"><span class="form-label">Statute</span><select class="form-input" id="leStatute">${statuteOptions}</select></div>
+      <div class="form-row"><span class="form-label">Manual Deadline</span><input type="date" class="form-input" id="leDeadline" value=""></div>
+      <p style="font-size:11px;color:var(--text-3);margin:4px 0 0 118px">Leave blank to auto-calculate from discovery + statute</p>
+      <div style="margin-top:10px"><button class="btn btn-primary" onclick="saveLimitation('${escAttr(activeMatter.file_no)}')">Save</button> <button class="btn" onclick="renderLimitationPanel(activeMatter)">Cancel</button></div>
+    </div>`;
+}
+function editLimitation(){document.getElementById('limitDisplay').style.display='none';document.getElementById('limitEdit').style.display='block';}
+async function saveLimitation(fn){
+  const data={discovery_date:document.getElementById('leDiscovery').value,statute:document.getElementById('leStatute').value,deadline:document.getElementById('leDeadline').value};
+  const result=await safeFetch(`/api/matters/${encFileNo(fn)}/limitation`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+  if(!result)return;
+  showToast(result.calculated_deadline?`Limitation: ${result.calculated_deadline}`:'Limitation updated');
+  await loadMatters();showMatter(fn);
+}
+async function clearLimitation(fn){
+  if(!confirm('Remove limitation tracking from this matter?'))return;
+  const r=await safeFetch(`/api/matters/${encFileNo(fn)}/limitation/clear`,{method:'POST',headers:{'Content-Type':'application/json'}});
+  if(!r)return;showToast('Limitation removed');await loadMatters();showMatter(fn);
+}
+
+// --- Court Deadlines ---
+function renderCourtDeadlinesPanel(m){
+  const dls=m.court_deadlines||[];
+  let dlHtml='';
+  if(dls.length){
+    dlHtml=dls.map((d,i)=>{
+      const days=daysBetween(d.date);const uc=urgencyClass(days);
+      return`<div class="dl-item"><span class="urgency-dot urgency-${uc}"></span><span class="dl-date">${d.date}</span><span class="dl-desc">${esc(d.description)}</span>${d.source?`<span class="dl-source">${esc(d.source)}</span>`:''}<button class="btn btn-sm btn-danger" onclick="removeCourtDeadline('${escAttr(m.file_no)}',${i})" title="Remove">\u2715</button></div>`;
+    }).join('');
+  }
+  document.getElementById('courtDeadlinesPanel').innerHTML=`
+    <div class="panel" style="position:relative;overflow:hidden">
+      <img src="/static/img/deadline-alert.jpg" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:100px;opacity:.35;border-radius:10px;pointer-events:none">
+      <div class="panel-label">Court-Ordered Deadlines</div>
+      ${dlHtml||'<div style="color:var(--text-3);font-size:13px;margin-bottom:8px">No court deadlines entered</div>'}
+      <button class="btn" style="margin-top:10px" onclick="toggleAddDeadline()">+ Add Deadline</button>
+      <div class="add-form" id="addDlForm">
+        <div class="form-row"><span class="form-label">Date</span><input type="date" class="form-input" id="dlDate"></div>
+        <div class="form-row"><span class="form-label">What's due</span><input class="form-input" id="dlDesc" placeholder="e.g. Amended claim to be filed"></div>
+        <div class="form-row"><span class="form-label">Source</span><input class="form-input" id="dlSource" placeholder="e.g. March 12 endorsement (optional)"></div>
+        <div style="margin-top:10px"><button class="btn btn-primary" onclick="saveCourtDeadline('${escAttr(m.file_no)}')">Add</button> <button class="btn" onclick="toggleAddDeadline()">Cancel</button></div>
+      </div>
+    </div>`;
+}
+function toggleAddDeadline(){document.getElementById('addDlForm').classList.toggle('visible');}
+async function saveCourtDeadline(fn){
+  const data={date:document.getElementById('dlDate').value,description:document.getElementById('dlDesc').value,source:document.getElementById('dlSource').value};
+  if(!data.date||!data.description)return;
+  const r=await safeFetch(`/api/matters/${encFileNo(fn)}/court-deadlines`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+  if(!r)return;showToast('Deadline added');await loadMatters();showMatter(fn);
+}
+async function removeCourtDeadline(fn,idx){
+  const r=await safeFetch(`/api/matters/${encFileNo(fn)}/court-deadlines/remove`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({index:idx})});
+  if(!r)return;showToast('Deadline removed');await loadMatters();showMatter(fn);
+}
+
+// --- Next Action ---
+function renderNextActionPanel(m){
+  document.getElementById('nextActionPanel').innerHTML=`
+    <div class="panel-label">Next Action / Deadline</div>
+    <div id="naDisplay"><div style="font-size:14px;color:var(--orange);font-weight:600">${esc(m.next_action||'\u2014')}</div><button class="btn" style="margin-top:12px" onclick="editNextAction()">Edit</button></div>
+    <div id="naEdit" style="display:none"><textarea class="form-input" id="naInput">${esc(m.next_action||'')}</textarea><div style="margin-top:8px"><button class="btn btn-primary" onclick="saveNextAction('${escAttr(m.file_no)}')">Save</button> <button class="btn" onclick="renderNextActionPanel(activeMatter)">Cancel</button></div></div>`;
+}
+function editNextAction(){document.getElementById('naDisplay').style.display='none';document.getElementById('naEdit').style.display='block';}
+async function saveNextAction(fn){
+  const r=await safeFetch(`/api/matters/${encFileNo(fn)}/next-action`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:document.getElementById('naInput').value})});
+  if(!r)return;showToast('Next action updated');await loadMatters();showMatter(fn);
+}
+
+// --- Timeline ---
+function renderTimeline(m){
+  const entries=m.timeline.length?m.timeline.slice().reverse().map(e=>`<div class="timeline-entry">${e.date?`<div class="entry-date">${e.date}</div>`:''}<div class="entry-text">${esc(e.text)}</div></div>`).join(''):'<div style="color:var(--text-3);padding:12px">No timeline entries</div>';
+  document.getElementById('timelineSection').innerHTML=`
+    <div class="timeline-section-wrap">
+    <div class="section-title"><span>Timeline (${m.timeline.length})</span><button class="btn btn-primary" onclick="toggleAddEntry()">+ Add Entry</button></div>
+    <div class="add-form" id="addEntryForm">
+      <div class="form-row"><input type="date" class="form-input" id="entryDate" value="${new Date().toISOString().slice(0,10)}" style="flex:0 0 160px"></div>
+      <textarea class="form-input" id="entryText" placeholder="What happened?"></textarea>
+      <div style="margin-top:8px"><button class="btn btn-primary" onclick="saveTimelineEntry('${escAttr(m.file_no)}')">Add</button> <button class="btn" onclick="toggleAddEntry()">Cancel</button></div>
+    </div>
+    <div class="timeline">${entries}</div>
+    </div>`;
+}
+function toggleAddEntry(){document.getElementById('addEntryForm').classList.toggle('visible');}
+async function saveTimelineEntry(fn){
+  const text=document.getElementById('entryText').value;if(!text.trim())return;
+  const r=await safeFetch(`/api/matters/${encFileNo(fn)}/timeline`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date:document.getElementById('entryDate').value,text})});
+  if(!r)return;showToast('Timeline entry added');await loadMatters();showMatter(fn);
+}
+
+// --- Conflict Check ---
+async function runConflictCheck(){
+  const query=document.getElementById('conflictInput').value.trim();if(!query)return;
+  const res=await fetch('/api/conflict-check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query})});
+  const result=await res.json();
+  if(result.error){document.getElementById('conflictResults').innerHTML=`<div style="color:var(--red)">${esc(result.error)}</div>`;return;}
+  let html=`<div style="font-size:12px;color:var(--text-3);margin-bottom:10px">Searched ${result.total_searched} matters for: ${result.terms.map(t=>'<strong>'+esc(t)+'</strong>').join(', ')}</div>`;
+  if(!result.hits.length){html+='<div style="text-align:center;padding:32px"><img src="/static/img/empty-state.jpg" style="width:120px;opacity:.6;margin-bottom:12px;filter:drop-shadow(0 0 20px rgba(61,214,140,.2))"><div style="color:var(--green);font-size:14px;font-weight:600">\u2713 No conflicts found</div></div>';}
+  else{
+    html+=`<div style="color:var(--orange);font-size:13px;font-weight:600;margin-bottom:10px">${result.hits.length} potential conflict${result.hits.length>1?'s':''}</div>`;
+    html+=result.hits.map(h=>`<div class="conflict-hit" onclick="showMatter('${escAttr(h.file_no)}')">
+      <div style="display:flex;justify-content:space-between;align-items:center"><div><span class="hit-file">${esc(h.file_no)}</span> \u00B7 <span style="color:${h.status==='Open'?'var(--green)':'var(--text-3)'}">${h.status}</span></div><span class="tag tag-${h.matter_type}">${h.matter_type}</span></div>
+      <div class="hit-client">${esc(h.client)}</div>
+      ${h.opposing?`<div style="font-size:12px;color:var(--text-3)">vs. ${esc(h.opposing)}</div>`:''}
+      ${h.other_parties?`<div style="font-size:12px;color:var(--text-3)">Related: ${esc(h.other_parties)}</div>`:''}
+      <div>${h.locations.map(l=>`<span class="hit-loc-tag">${l}</span>`).join('')}</div>
+      <div style="font-size:12px;color:var(--text-3);margin-top:6px">${esc(h.description)}</div>
+    </div>`).join('');
+  }
+  document.getElementById('conflictResults').innerHTML=html;
+}
+
+// --- Event Listeners ---
+document.querySelector('.sidebar-nav').addEventListener('click',e=>{if(e.target.classList.contains('nav-btn'))switchView(e.target.dataset.view);});
+document.getElementById('filterBtns').addEventListener('click',e=>{if(!e.target.classList.contains('filter-btn'))return;document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');currentFilter=e.target.dataset.filter;renderSidebar();});
+document.getElementById('searchInput').addEventListener('input',e=>{currentSearch=e.target.value;renderSidebar();});
+document.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault();document.getElementById('searchInput').focus();}if(e.key==='Escape'&&currentView==='detail')goBack();});
+document.getElementById('conflictInput')?.addEventListener('keydown',e=>{if(e.key==='Enter')runConflictCheck();});
+
+// --- Animated gradient borders on stat cards ---
+document.addEventListener('mousemove',e=>{
+  document.querySelectorAll('.stat-card').forEach(card=>{
+    const rect=card.getBoundingClientRect();
+    const cx=rect.left+rect.width/2,cy=rect.top+rect.height/2;
+    const angle=Math.atan2(e.clientY-cy,e.clientX-cx)*(180/Math.PI)+180;
+    card.style.setProperty('--card-angle',angle+'deg');
+  });
+});
+
+// --- Charts ---
+const chartColors={SCC:'#ff5a6a',Employment:'#a07cff',Corporate:'#6c8cff',Transactional:'#3dd68c','Demand/Recovery':'#ffaa44',Other:'#5c6078'};
+
+function renderTypeChart(){
+  const canvas=document.getElementById('typeChart');
+  const ctx=canvas.getContext('2d');
+  const dpr=window.devicePixelRatio||1;
+  canvas.width=canvas.offsetWidth*dpr;canvas.height=200*dpr;
+  ctx.scale(dpr,dpr);
+  const w=canvas.offsetWidth,h=200;
+  const open=matters.filter(m=>m.status==='Open');
+  const counts={};
+  open.forEach(m=>{counts[m.matter_type]=(counts[m.matter_type]||0)+1;});
+  const types=Object.keys(counts).sort((a,b)=>counts[b]-counts[a]);
+  if(!types.length){ctx.fillStyle='#5c6078';ctx.font='13px DM Sans';ctx.textAlign='center';ctx.fillText('No open matters',w/2,h/2);return;}
+  const total=open.length;
+  const cx=h/2+10,cy=h/2,r=Math.min(h/2-10,70),innerR=r*0.55;
+  let startAngle=-Math.PI/2;
+  types.forEach(type=>{
+    const slice=(counts[type]/total)*Math.PI*2;
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,startAngle,startAngle+slice);ctx.closePath();
+    ctx.fillStyle=chartColors[type]||'#5c6078';ctx.fill();
+    startAngle+=slice;
+  });
+  // Inner circle (donut hole)
+  ctx.beginPath();ctx.arc(cx,cy,innerR,0,Math.PI*2);ctx.fillStyle='#0e1018';ctx.fill();
+  // Center text
+  ctx.fillStyle='#e8eaf0';ctx.font='bold 24px JetBrains Mono';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(total,cx,cy-6);
+  ctx.fillStyle='#5c6078';ctx.font='10px DM Sans';ctx.fillText('open',cx,cy+12);
+  // Legend
+  const legendX=h+30;let legendY=20;
+  types.forEach(type=>{
+    ctx.fillStyle=chartColors[type]||'#5c6078';
+    ctx.beginPath();ctx.arc(legendX,legendY+5,5,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#9498a8';ctx.font='12px DM Sans';ctx.textAlign='left';ctx.textBaseline='middle';
+    ctx.fillText(`${type} (${counts[type]})`,legendX+14,legendY+5);
+    legendY+=24;
+  });
+}
+
+function renderIntakeChart(){
+  const canvas=document.getElementById('intakeChart');
+  const ctx=canvas.getContext('2d');
+  const dpr=window.devicePixelRatio||1;
+  canvas.width=canvas.offsetWidth*dpr;canvas.height=200*dpr;
+  ctx.scale(dpr,dpr);
+  const w=canvas.offsetWidth,h=200;
+  // Build last 6 months
+  const months=[];
+  for(let i=5;i>=0;i--){
+    const d=new Date(today);d.setMonth(d.getMonth()-i);
+    months.push({key:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'),
+      label:d.toLocaleString('en',{month:'short'})});
+  }
+  const opened={},closed={};
+  months.forEach(m=>{opened[m.key]=0;closed[m.key]=0;});
+  matters.forEach(m=>{
+    if(m.date_opened){const k=m.date_opened.slice(0,7);if(opened[k]!==undefined)opened[k]++;}
+    if(m.date_closed){const k=m.date_closed.slice(0,7);if(closed[k]!==undefined)closed[k]++;}
+  });
+  const maxVal=Math.max(1,...months.map(m=>Math.max(opened[m.key],closed[m.key])));
+  const pad={top:10,bottom:36,left:30,right:16};
+  const plotW=w-pad.left-pad.right,plotH=h-pad.top-pad.bottom;
+  const barGroupW=plotW/months.length;
+  const barW=Math.min(barGroupW*0.3,24);
+  // Grid lines
+  const gridLines=4;
+  ctx.strokeStyle='rgba(255,255,255,0.04)';ctx.lineWidth=1;
+  for(let i=0;i<=gridLines;i++){
+    const y=pad.top+plotH-(plotH/gridLines)*i;
+    ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(w-pad.right,y);ctx.stroke();
+    ctx.fillStyle='#5c6078';ctx.font='10px JetBrains Mono';ctx.textAlign='right';ctx.textBaseline='middle';
+    ctx.fillText(Math.round(maxVal/gridLines*i),pad.left-6,y);
+  }
+  months.forEach((m,i)=>{
+    const cx=pad.left+barGroupW*i+barGroupW/2;
+    const oH=(opened[m.key]/maxVal)*plotH;
+    const cH=(closed[m.key]/maxVal)*plotH;
+    // Opened bar
+    const oY=pad.top+plotH-oH;
+    ctx.fillStyle='#6c8cff';
+    ctx.beginPath();
+    const oR=Math.min(3,barW/2);
+    roundRect(ctx,cx-barW-1,oY,barW,oH,oR);ctx.fill();
+    // Closed bar
+    const cY=pad.top+plotH-cH;
+    ctx.fillStyle='#3dd68c';
+    ctx.beginPath();
+    roundRect(ctx,cx+1,cY,barW,cH,oR);ctx.fill();
+    // Count labels above bars
+    if(opened[m.key]){ctx.fillStyle='#6c8cff';ctx.font='10px JetBrains Mono';ctx.textAlign='center';ctx.fillText(opened[m.key],cx-barW/2-1,oY-6);}
+    if(closed[m.key]){ctx.fillStyle='#3dd68c';ctx.font='10px JetBrains Mono';ctx.textAlign='center';ctx.fillText(closed[m.key],cx+barW/2+1,cY-6);}
+    // Month label
+    ctx.fillStyle='#5c6078';ctx.font='11px DM Sans';ctx.textAlign='center';ctx.textBaseline='top';
+    ctx.fillText(m.label,cx,pad.top+plotH+8);
+  });
+  // Legend
+  ctx.fillStyle='#6c8cff';ctx.beginPath();ctx.arc(w-120,h-10,4,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#9498a8';ctx.font='11px DM Sans';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText('Opened',w-112,h-10);
+  ctx.fillStyle='#3dd68c';ctx.beginPath();ctx.arc(w-56,h-10,4,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#9498a8';ctx.fillText('Closed',w-48,h-10);
+}
+
+function roundRect(ctx,x,y,w,h,r){
+  if(h<1)return;
+  r=Math.min(r,h/2,w/2);
+  ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h);ctx.lineTo(x,y+h);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();
+}
+
+// --- Firm Activity Charts ---
+
+function renderActivityChart(){
+  const canvas=document.getElementById('activityChart');
+  const ctx=canvas.getContext('2d');
+  const dpr=window.devicePixelRatio||1;
+  canvas.width=canvas.offsetWidth*dpr;canvas.height=200*dpr;
+  ctx.scale(dpr,dpr);
+  const w=canvas.offsetWidth,h=200;
+  // Build last 12 weeks with Mon start
+  const weeks=[];
+  for(let i=11;i>=0;i--){
+    const wEnd=new Date(today);wEnd.setDate(wEnd.getDate()-wEnd.getDay()-i*7+6);// Sun end
+    const wStart=new Date(wEnd);wStart.setDate(wStart.getDate()-6);// Mon start
+    weeks.push({start:wStart,end:wEnd,label:wStart.toLocaleDateString('en',{month:'short',day:'numeric'}),events:0,opened:0,closed:0});
+  }
+  // Count timeline entries, opens, and closes per week
+  matters.forEach(m=>{
+    (m.timeline||[]).forEach(e=>{
+      if(!e.date)return;
+      const d=new Date(e.date+'T00:00:00');
+      weeks.forEach(wk=>{if(d>=wk.start&&d<=wk.end)wk.events++;});
+    });
+    if(m.date_opened){const d=new Date(m.date_opened+'T00:00:00');weeks.forEach(wk=>{if(d>=wk.start&&d<=wk.end)wk.opened++;});}
+    if(m.date_closed){const d=new Date(m.date_closed+'T00:00:00');weeks.forEach(wk=>{if(d>=wk.start&&d<=wk.end)wk.closed++;});}
+  });
+  const maxVal=Math.max(1,...weeks.map(wk=>wk.events));
+  const pad={top:16,bottom:40,left:34,right:16};
+  const plotW=w-pad.left-pad.right,plotH=h-pad.top-pad.bottom;
+  // Grid lines
+  const gridLines=4;
+  ctx.strokeStyle='rgba(255,255,255,0.04)';ctx.lineWidth=1;
+  for(let i=0;i<=gridLines;i++){
+    const y=pad.top+plotH-(plotH/gridLines)*i;
+    ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(w-pad.right,y);ctx.stroke();
+    ctx.fillStyle='#5c6078';ctx.font='10px JetBrains Mono';ctx.textAlign='right';ctx.textBaseline='middle';
+    ctx.fillText(Math.round(maxVal/gridLines*i),pad.left-6,y);
+  }
+  // Area fill
+  const pts=weeks.map((wk,i)=>({x:pad.left+i*(plotW/(weeks.length-1)),y:pad.top+plotH-(wk.events/maxVal)*plotH}));
+  if(pts.length>1){
+    ctx.beginPath();ctx.moveTo(pts[0].x,pad.top+plotH);
+    pts.forEach(p=>ctx.lineTo(p.x,p.y));
+    ctx.lineTo(pts[pts.length-1].x,pad.top+plotH);ctx.closePath();
+    const grad=ctx.createLinearGradient(0,pad.top,0,pad.top+plotH);
+    grad.addColorStop(0,'rgba(108,140,255,0.18)');grad.addColorStop(1,'rgba(108,140,255,0.01)');
+    ctx.fillStyle=grad;ctx.fill();
+    // Line
+    ctx.beginPath();pts.forEach((p,i)=>{if(i===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);});
+    ctx.strokeStyle='#6c8cff';ctx.lineWidth=2;ctx.lineJoin='round';ctx.stroke();
+    // Dots
+    pts.forEach((p,i)=>{
+      ctx.beginPath();ctx.arc(p.x,p.y,3,0,Math.PI*2);
+      ctx.fillStyle=i===pts.length-1?'#8aa4ff':'#6c8cff';ctx.fill();
+      if(i===pts.length-1){ctx.beginPath();ctx.arc(p.x,p.y,6,0,Math.PI*2);ctx.strokeStyle='rgba(108,140,255,0.3)';ctx.lineWidth=1.5;ctx.stroke();}
+    });
+  }
+  // X labels (every other week to avoid crowding)
+  weeks.forEach((wk,i)=>{
+    if(i%2===0||i===weeks.length-1){
+      const x=pad.left+i*(plotW/(weeks.length-1));
+      ctx.fillStyle='#5c6078';ctx.font='10px DM Sans';ctx.textAlign='center';ctx.textBaseline='top';
+      ctx.fillText(wk.label,x,pad.top+plotH+8);
+    }
+  });
+  // Opened/Closed mini-legend with totals
+  const totEvents=weeks.reduce((s,wk)=>s+wk.events,0);
+  const totOpened=weeks.reduce((s,wk)=>s+wk.opened,0);
+  const totClosed=weeks.reduce((s,wk)=>s+wk.closed,0);
+  ctx.fillStyle='#9498a8';ctx.font='11px DM Sans';ctx.textAlign='right';ctx.textBaseline='top';
+  ctx.fillText(`${totEvents} events \u00b7 ${totOpened} opened \u00b7 ${totClosed} closed`,w-pad.right,pad.top+plotH+22);
+}
+
+function renderLifecycleChart(){
+  const canvas=document.getElementById('lifecycleChart');
+  const ctx=canvas.getContext('2d');
+  const dpr=window.devicePixelRatio||1;
+  canvas.width=canvas.offsetWidth*dpr;canvas.height=200*dpr;
+  ctx.scale(dpr,dpr);
+  const w=canvas.offsetWidth,h=200;
+  // Compute avg days open per type
+  const typeData={};
+  const typeColors={SCC:'#ff5a6a',Employment:'#a07cff',Corporate:'#6c8cff',Transactional:'#3dd68c','Demand/Recovery':'#ffaa44',Other:'#5c6078'};
+  matters.forEach(m=>{
+    if(!m.date_opened)return;
+    const opened=new Date(m.date_opened+'T00:00:00');
+    const end=m.date_closed?new Date(m.date_closed+'T00:00:00'):today;
+    const days=Math.max(0,Math.round((end-opened)/(1000*60*60*24)));
+    if(!typeData[m.matter_type])typeData[m.matter_type]={total:0,count:0,color:typeColors[m.matter_type]||'#5c6078'};
+    typeData[m.matter_type].total+=days;
+    typeData[m.matter_type].count++;
+  });
+  const types=Object.keys(typeData).sort((a,b)=>(typeData[b].total/typeData[b].count)-(typeData[a].total/typeData[a].count));
+  if(!types.length){ctx.fillStyle='#5c6078';ctx.font='13px DM Sans';ctx.textAlign='center';ctx.fillText('No data',w/2,h/2);return;}
+  const avgs=types.map(t=>({type:t,avg:Math.round(typeData[t].total/typeData[t].count),count:typeData[t].count,color:typeData[t].color}));
+  const maxAvg=Math.max(1,...avgs.map(a=>a.avg));
+  const pad={top:12,bottom:8,left:120,right:60};
+  const plotW=w-pad.left-pad.right;
+  const barH=Math.min(24,((h-pad.top-pad.bottom)/types.length)-8);
+  const gap=(h-pad.top-pad.bottom-barH*types.length)/(types.length+1);
+  avgs.forEach((a,i)=>{
+    const y=pad.top+gap+(barH+gap)*i;
+    const bw=Math.max(2,(a.avg/maxAvg)*plotW);
+    // Bar background track
+    ctx.fillStyle='rgba(255,255,255,0.03)';
+    roundRect(ctx,pad.left,y,plotW,barH,4);ctx.fill();
+    // Bar fill with gradient
+    const grad=ctx.createLinearGradient(pad.left,0,pad.left+bw,0);
+    grad.addColorStop(0,a.color+'cc');grad.addColorStop(1,a.color+'44');
+    ctx.fillStyle=grad;
+    roundRect(ctx,pad.left,y,bw,barH,4);ctx.fill();
+    // Type label
+    ctx.fillStyle='#9498a8';ctx.font='12px DM Sans';ctx.textAlign='right';ctx.textBaseline='middle';
+    ctx.fillText(a.type,pad.left-10,y+barH/2);
+    // Value label
+    ctx.fillStyle=a.color;ctx.font='bold 11px JetBrains Mono';ctx.textAlign='left';
+    ctx.fillText(`${a.avg}d`,pad.left+bw+8,y+barH/2);
+    // Count label (subtle)
+    ctx.fillStyle='#5c6078';ctx.font='10px DM Sans';
+    ctx.fillText(`(${a.count})`,pad.left+bw+8+(a.avg>99?36:28),y+barH/2);
+  });
+}
+
+// --- Matter closed celebration ---
+function showClosedCelebration(){
+  const overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;z-index:500;background:rgba(6,7,11,.8);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;flex-direction:column;animation:viewIn .3s cubic-bezier(.16,1,.3,1);cursor:pointer';
+  overlay.innerHTML=`<img src="/static/img/matter-closed.jpg" class="matter-closed-img" style="width:200px;border-radius:12px;box-shadow:0 0 60px rgba(61,214,140,.2)"><div style="color:var(--green);font-size:20px;font-weight:700;margin-top:16px">Matter Closed</div><div style="color:var(--text-3);font-size:13px;margin-top:6px">Click anywhere to continue</div>`;
+  overlay.onclick=()=>{overlay.style.opacity='0';setTimeout(()=>overlay.remove(),300);};
+  document.body.appendChild(overlay);
+  setTimeout(()=>{overlay.style.opacity='0';setTimeout(()=>overlay.remove(),300);},3000);
+}
+
+// --- Count-up animation for stat values ---
+function animateCountUp(){
+  document.querySelectorAll('.stat-value').forEach(el=>{
+    const target=parseInt(el.textContent);if(isNaN(target))return;
+    const duration=600;const start=performance.now();
+    el.textContent='0';
+    function tick(now){
+      const elapsed=now-start;const progress=Math.min(elapsed/duration,1);
+      const eased=1-Math.pow(1-progress,3);
+      el.textContent=Math.round(target*eased);
+      if(progress<1)requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  });
+}
+
+// --- Loading skeleton ---
+function showSkeleton(){
+  document.getElementById('statsRow').innerHTML=Array(4).fill('<div class="stat-card"><div class="skeleton" style="width:60%;height:12px;margin-bottom:12px"></div><div class="skeleton" style="width:40%;height:36px"></div></div>').join('');
+  document.getElementById('deadlineBody').innerHTML=Array(5).fill('<tr><td colspan="6"><div class="skeleton" style="width:100%;height:16px;margin:4px 0"></div></td></tr>').join('');
+}
+showSkeleton();
+
+// --- Splash screen ---
+function dismissSplash(){
+  const splash=document.getElementById('splashScreen');
+  if(splash){splash.classList.add('hide');setTimeout(()=>splash.remove(),700);}
+}
+// Dismiss splash after data loads or after 2.5s, whichever comes first
+setTimeout(dismissSplash,2500);
+
+async function initApp(){
+  await loadMatters();
+  dismissSplash();
+}
+initApp();
+setInterval(loadMatters, 60 * 1000);
+</script>
+</body>
+</html>
