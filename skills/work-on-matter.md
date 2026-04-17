@@ -110,37 +110,7 @@ Do NOT save the brief after quick factual lookups (e.g. "what's the limitation d
 
 #### Brief Format
 
-The brief should stay **short — one page max**. It's a current-state snapshot, not a diary. Think of it like a reporting letter to a client: if a new associate picked this up tomorrow, what do they need to know?
-
-```markdown
-# [Client Name] — [File #]
-
-## Matter Summary
-[2-3 sentences: what this matter is about, who the parties are, what stage it's at]
-
-## Key Terms / Provisions
-[Only for transactional matters — price, term, material conditions, unusual clauses]
-
-## Risks & Issues Flagged
-- [Concise bullet points of flagged risks, unusual provisions, practical concerns]
-
-## Positions Taken / Advice Given
-- [Key advice given, positions taken in negotiations, strategic decisions made]
-
-## Open Items
-- [What's still unresolved, pending, or needs follow-up]
-
-## Last Updated
-[Date of this update]
-```
-
-Omit any section that doesn't apply (e.g., skip "Key Terms" for a litigation matter). The point is brevity — if the brief is getting long, you're putting in too much detail.
-
-**Privilege warning**: Always include this header at the top of every brief:
-
-```
-> PRIVILEGED & CONFIDENTIAL — Solicitor-Client Privilege / Work Product
-```
+Use the Matter Brief Format defined in the matter-tracker skill (template, privilege header, one-page limit).
 
 After the **first** save in a session, let the user know: "Matter brief saved to [folder]/_matter-brief.md." Subsequent incremental saves should be silent — don't announce every update. If the user asks, confirm the brief is being kept current.
 
@@ -150,10 +120,7 @@ If the user declines or it's not relevant, that's fine — the brief alone captu
 
 ## Important Rules
 
-1. **Save the brief inline, not later.** After every substantive task (document review, advice, drafting, decision), update `_matter-brief.md` in the same response as the work. Never defer it to a "wrap-up" step — sessions end without warning. This is the single most important rule in this skill.
-2. **This skill is read-heavy, write-light.** The only file it creates/modifies is `_matter-brief.md`. It does not touch the tracker spreadsheet — that's the matter-tracker skill's job.
-3. **Don't run a Gmail pull or full folder scan.** This skill is for fast context loading, not research. If the user needs a full timeline refresh with Gmail, they should run "update matter [name]" via the tracker skill.
-4. **Keep the brief lean.** If you find yourself writing more than ~40 lines, you're including too much. Summarize; don't transcribe.
-5. **Don't save after quick lookups.** "What's the limitation deadline?" doesn't warrant a brief update.
-6. **Find the tracker automatically.** Check CWD, then CWD's parent, then one level up. If not found after three checks, ask the user. Do not glob recursively.
-7. **Don't double-write the brief.** If the matter-tracker skill already wrote/refreshed `_matter-brief.md` during this session (e.g., the user ran "update matter [name]"), skip the brief save in this skill to avoid overwriting the tracker skill's more comprehensive output.
+1. **This skill is read-heavy, write-light.** The only file it creates/modifies is `_matter-brief.md`. It does not touch the tracker spreadsheet — that's the matter-tracker skill's job.
+2. **Don't run a Gmail pull or full folder scan.** This skill is for fast context loading, not research. If the user needs a full timeline refresh with Gmail, they should run "update matter [name]" via the tracker skill.
+3. **Keep the brief lean.** If you find yourself writing more than ~40 lines, you're including too much. Summarize; don't transcribe.
+4. **Don't double-write the brief.** If the matter-tracker skill already wrote/refreshed `_matter-brief.md` during this session (e.g., the user ran "update matter [name]"), skip the brief save in this skill to avoid overwriting the tracker skill's more comprehensive output.
