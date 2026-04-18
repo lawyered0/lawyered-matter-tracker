@@ -67,7 +67,7 @@ Categorize each email as:
 For each matched email, assign a priority:
 
 **URGENT** (surface at top, with warning):
-- Email from a court or tribunal domain (configure your jurisdiction's court email domains in CLAUDE.md — e.g. government or court system domains), or any email with "court" or "tribunal" in the domain
+- Email from a court or tribunal domain (configure your jurisdiction's court email domains in CLAUDE.md), or any email with "court" or "tribunal" in the domain
 - Email referencing a hearing date, trial date, or court appearance
 - Email containing the words "order", "endorsement", "judgment", or "ruling"
 - Email with a deadline or due date within 7 days
@@ -198,7 +198,7 @@ NEW ACTIVITY ON OPEN MATTERS
 
 2026-031 | Acme Corp — Corporate purchase
   - 1 new email:
-    • From: client (contact@acmecorp.com) — "Signed docs attached" (2:30 PM) [2 attachments]
+    • From: client (contact@acmecorp.example) — "Signed docs attached" (2:30 PM) [2 attachments]
   - Suggested action: Review signed documents
 
 [If no matters have new email:] No new email activity on open matters.
@@ -216,7 +216,7 @@ TRACKER UPDATES (auto-filled)
 TRACKER GAPS (needs your call)
 ========================================
 [If any fields need your review from Step 5:]
-- 2026-045 | Beta Ltd — Description is generic ("Dispute"). Suggest: "Commercial lease termination — 123 Main St, Toronto"
+- 2026-045 | Beta Ltd — Description is generic ("Dispute"). Suggest: "Commercial lease termination — 123 Main St"
 - 2026-008 | Lee — Limitation deadline appears to be 2026-09-15 (2-year from incident date 2024-09-15 per email thread). Add it? [y/n]
 
 [If none:] No gaps requiring review.
@@ -226,7 +226,7 @@ TRACKER ALERTS
 ========================================
 [Limitation deadlines:]
 - 2026-012 | Smith — Limitation expires 2026-07-01 (103 days)
-- 2026-044 | Patel — Limitation expires 2026-11-15 (240 days)
+- 2026-044 | Chen — Limitation expires 2026-11-15 (240 days)
 
 [Court deadlines within 30 days:]
 - 2026-019 | Davis — Settlement conference 2026-04-02 (13 days)
@@ -250,21 +250,21 @@ These are matters where you are already acting. They should be tracked.
       rivera@example.com | 3 emails today | You drafted a response to the demand letter
       → Ready to open: "new matter Delta Fitness"
 
-  [2] Wayne Evans / MedCo — Physician NDA
-      wevans@example.com | Confidentiality agreement finalized and sent today
-      → Ready to open: "new matter Evans"
+  [2] Taylor Ross / MedCo — Physician NDA
+      tross@example.com | Confidentiality agreement finalized and sent today
+      → Ready to open: "new matter Ross"
 
 NEW CLIENTS — INTAKE UNDERWAY
 Retention appears confirmed or near-confirmed based on correspondence.
 
-  [3] Sidra Malik — Commercial lease dispute (Malik Corp)
-      smalik@example.com | Client sent supporting docs, you reviewed and replied
-      → Ready to open: "new matter Malik"
+  [3] Alex Kim — Commercial lease dispute (Kim Corp)
+      akim@example.com | Client sent supporting docs, you reviewed and replied
+      → Ready to open: "new matter Kim"
 
 LEADS — NOT YET RETAINED
 First contact only. Follow up or pass.
 
-  [4] Referral platform lead — Condo building defect (construction/real estate, ON)
+  [4] Referral platform lead — Condo building defect (construction/real estate)
       Via referrals@example.com | Mold and water infiltration issue
       → Outside practice area? Skip or respond to decline.
 
@@ -282,8 +282,8 @@ After the user responds to the decision list:
 1. **For each selected number**: Confirm the client name that will be passed to the matter-tracker skill. The triage does NOT open the matter itself — it tells the user to run the command.
    - Example response: "Got it. Run these to open them:"
      - `new matter Delta Fitness` (Rivera — Globex dispute)
-     - `new matter Evans` (Wayne — MedCo NDA)
-     - `new matter Malik` (Sidra — lease dispute)
+     - `new matter Ross` (Taylor — MedCo NDA)
+     - `new matter Kim` (Alex — lease dispute)
 
 2. **For skipped items**: No action needed. They stay in Gmail and will surface again in the next triage if still unmatched.
 
@@ -293,14 +293,19 @@ After the user responds to the decision list:
 
 ## Important Rules
 
-1. **Minimal writes only.** This skill auto-fills missing low-risk tracker fields (client email, opposing party, other parties) discovered from email data. It does not write timeline entries, briefs, or send emails. Judgment calls (descriptions, deadlines, next actions) are surfaced for the user to approve, never written automatically.
-2. **Don't skip unmatched emails.** Unmatched emails are valuable — they surface new client inquiries and matters that haven't been opened yet.
-3. **Be concise.** The triage should be scannable in under 60 seconds. One line per email, one line per alert. Details come later when the user asks to drill in.
-4. **Handle weekends and gaps.** If the user runs this on Monday morning, expand the window to cover the weekend. If they say "I haven't checked since Thursday," search from Thursday.
-5. **Don't duplicate the matter-tracker skill's job.** This skill identifies what needs attention and auto-fills missing contact/party fields. It does NOT write timeline entries, update Last Activity dates, or change matter status — those are the matter-tracker's job. The user runs "update matter [name]" for substantive tracker changes.
-6. **Suggest but don't nag.** If stale matters or blank fields are found, mention them once. Don't repeat alerts the user has already seen in a previous triage.
-7. **Gmail unavailable fallback.** If Gmail MCP tools aren't available, skip the email scan entirely and just run the tracker review (Step 6 alerts only). Tell the user: "Gmail tools not available — showing tracker alerts only." Steps 2-5 and 7 are skipped because they depend on email data.
-8. **Closed matter matches.** If an unmatched email matches a recently closed matter (within 30 days), flag it explicitly: "Matches closed matter 2026-043 (Miller, closed Mar 17)." This may indicate follow-up activity on a matter the user thought was done, or a returning client.
-9. **One-line summaries with context.** Each numbered item in Categories A/B/C gets: sender name + email, a one-line description of what the thread is about, and why it's in this category (e.g., "You drafted a response" or "First contact, no reply yet"). This gives the user enough to decide without re-reading the email.
-10. **Auto-fill confidence threshold.** Only auto-fill a field when the match is unambiguous. If the matched email could be from the client OR a third party (e.g., a paralegal forwarding on behalf of a client), don't auto-fill — surface it in TRACKER GAPS instead. When in doubt, ask rather than write.
-11. **Handle gap approvals inline.** If the user approves a suggested gap fill (e.g., responds "yes" to a limitation deadline suggestion), write it to the tracker immediately using the same openpyxl approach. No need to run `update matter` for a single field fix.
+1. **Minimal writes only.** This skill auto-fills missing low-risk tracker fields (client email, opposing party, other parties) discovered from email data. It does not write timeline entries, briefs, or send emails. All auto-fills are reported in the triage output. Judgment calls (descriptions, deadlines, next actions) are surfaced for the user to approve, never written automatically.
+2. **Read full threads, not snippets.** Snippets miss dates, amounts, and deadlines. Use `gmail_read_thread` on every matched thread.
+3. **Don't skip unmatched emails.** Unmatched emails are valuable — they surface new client inquiries and matters that haven't been opened yet.
+4. **Court emails are always urgent.** Any email from a court or tribunal domain gets top priority regardless of content.
+5. **Be concise.** The triage should be scannable in under 60 seconds. One line per email, one line per alert. Details come later when the user asks to drill in.
+6. **Handle weekends and gaps.** If the user runs this on Monday morning, expand the window to cover the weekend. If they say "I haven't checked since Thursday," search from Thursday.
+7. **Don't duplicate the matter-tracker skill's job.** This skill identifies what needs attention and auto-fills missing contact/party fields. It does NOT write timeline entries, update Last Activity dates, or change matter status — those are the matter-tracker's job. The user runs "update matter [name]" for substantive tracker changes.
+8. **Suggest but don't nag.** If stale matters or blank fields are found, mention them once. Don't repeat alerts the user has already seen in a previous triage.
+9. **Gmail unavailable fallback.** If Gmail MCP tools aren't available, skip the email scan entirely and just run the tracker review (Step 6 alerts only). Tell the user: "Gmail tools not available — showing tracker alerts only." Steps 2-5 and 7 are skipped because they depend on email data.
+10. **Classify, don't just list.** The Inbox Review section must categorize unmatched emails into A/B/C/D. Never present unmatched emails as a flat undifferentiated list. The categories exist to save decision-making energy — use the thread content to classify accurately.
+11. **Category D stays quiet.** Non-legal emails (personal, newsletters, marketing, billing confirmations, spam) should never be listed individually. State the count and move on. The user does not need to see "LinkedIn — 3 new notifications" in a legal triage.
+12. **Closed matter matches.** If an unmatched email matches a recently closed matter (within 30 days), flag it explicitly: "Matches closed matter 2026-043 (Miller, closed Mar 17)." This may indicate follow-up activity on a matter the user thought was done, or a returning client.
+13. **Number the actionable items.** Categories A, B, and C must be presented as a single numbered list (not three separate numbered lists). This lets the user respond with "1, 3, 5" without ambiguity.
+14. **One-line summaries with context.** Each numbered item gets: sender name + email, a one-line description of what the thread is about, and why it's in this category (e.g., "You drafted a response" or "First contact, no reply yet"). This gives the user enough to decide without re-reading the email.
+15. **Auto-fill confidence threshold.** Only auto-fill a field when the match is unambiguous. If the matched email could be from the client OR a third party (e.g., a paralegal forwarding on behalf of a client), don't auto-fill — surface it in TRACKER GAPS instead. When in doubt, ask rather than write.
+16. **Handle gap approvals inline.** If the user approves a suggested gap fill (e.g., responds "yes" to a limitation deadline suggestion), write it to the tracker immediately using the same openpyxl approach. No need to run `update matter` for a single field fix.

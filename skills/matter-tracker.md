@@ -56,8 +56,8 @@ Both sheets use these columns:
 | Q | Limitation Statute | Text | Key identifying the applicable limitation statute (e.g. "general_statute", "civil_rights"). ONLY set when there is a live or potential claim. Leave blank for transactional/advisory matters. |
 | R | Limitation Deadline | Date (YYYY-MM-DD) | Calculated or manually entered limitation expiry. Auto-calculated from Discovery Date + Statute if both are set. ONLY set when there is a live or potential claim. |
 | S | Court Deadlines | Text (JSON array) | Court-ordered deadlines stored as JSON. Each entry: {"date":"YYYY-MM-DD","description":"what's due","source":"endorsement or order reference"}. Only for bespoke deadlines from endorsements/orders — NOT routine rule-based deadlines like "defence due in 20 days". |
-| T | Matter Folder | Text | Subfolder name (NOT a full path) within the Open Files directory (e.g. "Smith, J."). Used to resolve the matter folder path on disk. See the NEW MATTER workflow for the search strategy. |
-| U | Other Parties / Related Persons | Text (wrap text) | All non-client, non-opposing parties involved in the matter: co-plaintiffs, co-defendants, witnesses, guarantors, landlords, agents, process servers, adjusters, corporate officers, and anyone else whose name should trigger a conflict check. Comma-separated. Include individuals behind corporate opposing parties if known (e.g. if opposing party is "Globex Corp", and the director is "Jane Doe", list "Jane Doe" here). This column is searched during conflict checks to catch indirect conflicts. |
+| T | Matter Folder | Text | Subfolder name (NOT a full path) within the Open Files directory (e.g. "Smith, J." — not "/Users/.../Smith, J."). Used to resolve the matter folder path on disk. When creating a new matter, search the Open Files directory for a subfolder matching the client — try ALL of: the individual's last name, first name, full name, "Last, First" format, the company/entity name, and common abbreviations. Client folders are often named after the entity rather than the person (e.g. "Globex Inc." not "Smith, John"). Cast a wide net: list all subfolders and grep for each search term separately. Write just the subfolder name. Leave blank if no match. |
+| U | Other Parties / Related Persons | Text (wrap text) | All non-client, non-opposing parties involved in the matter: co-plaintiffs, co-defendants, witnesses, guarantors, landlords, agents, process servers, adjusters, corporate officers, and anyone else whose name should trigger a conflict check. Comma-separated. Include individuals behind corporate opposing parties if known (e.g. if opposing party is "Acme Corp", and the director is "Jane Doe", list "Jane Doe" here). This column is searched during conflict checks to catch indirect conflicts. |
 
 ### Formatting
 
@@ -70,7 +70,14 @@ Both sheets use these columns:
 
 ### Row Formatting (CRITICAL — must match existing rows exactly)
 
-When appending or modifying any data row, clone the formatting from the nearest existing data row using this openpyxl pattern:
+When appending or modifying any data row, **clone the formatting from the nearest existing data row** to ensure visual consistency. Specifically:
+
+1. **Borders**: Every cell in columns A–U must have thin borders on all four sides (left, right, top, bottom). Use `Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))`.
+2. **Wrap text**: Set `wrap_text=True` ONLY on columns C (Matter Description), I (Next Action / Deadline), J (Timeline), S (Court Deadlines), and U (Other Parties). All other columns must have `wrap_text=False` or no wrap setting.
+3. **Font**: Arial 10pt, no bold (bold is header row only).
+4. **Alignment**: Do not set vertical alignment to 'top' or any other value unless the existing rows use it. Match whatever the existing data rows use.
+
+**Implementation pattern** (openpyxl):
 ```python
 from openpyxl.styles import Font, Border, Side, Alignment
 
@@ -125,7 +132,7 @@ The Timeline column (J) has two parts: a **substantive summary** at the top, the
 Every timeline begins with a `SUMMARY:` block that captures the substance of the matter — the facts, the money, the legal issues, and the current posture. This is the "what is this about and where does it stand" overview that someone reading the tracker needs to understand the file without opening a single document.
 
 ```
-SUMMARY: [Client] retained [Your Name] re: [what happened — the underlying facts, not just "breach of contract" but the actual story]. [Key amounts, terms, or stakes]. [Current posture — what stage the matter is at, what's been done, what's pending]. [Key risk or issue if any].
+SUMMARY: [Client] retained the lawyer re: [what happened — the underlying facts, not just "breach of contract" but the actual story]. [Key amounts, terms, or stakes]. [Current posture — what stage the matter is at, what's been done, what's pending]. [Key risk or issue if any].
 ```
 
 Rules for the summary:
@@ -224,7 +231,7 @@ Column S stores court-ordered deadlines as a JSON array. Each entry has three fi
 ```json
 [
   {"date": "2026-03-25", "description": "Amend claim to add corporation", "source": "March 12 endorsement"},
-  {"date": "2026-04-27", "description": "Serve Form 1B on defendants", "source": "Rule 1.03 — 30 days before trial"}
+  {"date": "2026-04-27", "description": "Serve Form 1B on defendants", "source": "court rule — 30 days before trial"}
 ]
 ```
 
@@ -331,6 +338,12 @@ Before adding a new matter, **always run a full conflicts check** against the ex
 8. If any adverse match is found: **stop immediately and alert the user** — "Potential conflict: [New Opposing Party] appears as a client in File #[X], or [New Client] appears as an opposing party in File #[X]. You must resolve this conflict before opening this file."
 9. If no matches on either part, proceed normally.
 
+**Search scope summary** — the conflict check searches these columns for every name involved:
+- Column B (Client Name) — both sheets
+- Column C (Matter Description) — both sheets
+- Column H (Opposing Party) — both sheets
+- Column U (Other Parties / Related Persons) — both sheets
+
 ## Workflows
 
 ### 1. NEW MATTER
@@ -378,7 +391,7 @@ Before adding a new matter, **always run a full conflicts check** against the ex
    - **If the matter involves a claim**: ask about discovery date and limitation statute; populate columns P-R. Flag if limitation is within 6 months.
    - **If the matter is transactional/advisory**: leave columns P-R blank.
    - Leave Court Deadlines (S) blank unless folder files or emails reveal a specific court-ordered deadline.
-   - **Matter Folder (T)**: Search the workspace directory for a subfolder matching the client. **All matching must be case-insensitive.** First, dump the full directory listing to a text file using `ls -1 > /tmp/dirlist.txt`, then grep against that file — this avoids shell issues with special characters (colons, ampersands, parentheses, etc.) in folder names. Try matching against ALL of these permutations of the client name: "First Last" (e.g. "wayne evans"), "Last, First" (e.g. "Evans, Wayne"), "Last First" (no comma), just the last name, just the first name, and any company/entity name from the matter description or opposing party field. **Also search for the mother/father/third-party name if the matter is brought on someone else's behalf** (e.g. for "Smith v. Jones" brought by Mary Davis on behalf of Ann Smith, search for "Davis", "Mary", "Smith", and "Ann"). Folders are often named in lowercase or informal formats (e.g. "wayne evans" not "Evans, Wayne"), or after the entity rather than the person (e.g. "Acme Corp" not "Smith, John"), and frequently contain special characters like colons (e.g. "Mary Davis : Smith"). Cast a wide net — grep each search term separately and case-insensitively against the text file listing. If found, write just the subfolder name exactly as it appears on disk. If not found, leave blank.
+   - **Matter Folder (T)**: Search the workspace directory for a subfolder matching the client. **All matching must be case-insensitive.** First, dump the full directory listing to a text file using `ls -1 > /tmp/dirlist.txt`, then grep against that file — this avoids shell issues with special characters (colons, ampersands, parentheses, etc.) in folder names. Try matching against ALL of these permutations of the client name: "First Last" (e.g. "taylor ross"), "Last, First" (e.g. "Ross, Taylor"), "Last First" (no comma), just the last name, just the first name, and any company/entity name from the matter description or opposing party field. **Also search for the mother/father/third-party name if the matter is brought on someone else's behalf** (e.g. for "Smith v. Jones" brought by Mary Davis on behalf of Ann Smith, search for "Davis", "Mary", "Smith", and "Ann"). Folders are often named in lowercase or informal formats (e.g. "taylor ross" not "Ross, Taylor"), or after the entity rather than the person (e.g. "Globex Inc." not "Smith, John"), and frequently contain special characters like colons (e.g. "Mary Davis : Smith"). Cast a wide net — grep each search term separately and case-insensitively against the text file listing. If found, write just the subfolder name exactly as it appears on disk. If not found, leave blank.
 7. Save the updated tracker to disk.
 
 ### 2. UPDATE MATTER
@@ -599,6 +612,13 @@ Use the xlsx skill's recalc script if any formulas are added.
 8. **Back up before writing.** Before any write operation (new, update, close), create a timestamped backup of the tracker (e.g., `matter-tracker-backup-2026-03-18.xlsx`) in a `backups/` subfolder alongside the tracker. Create the `backups/` folder if it doesn't exist. After writing the updated tracker, **verify the written file opens cleanly** by re-loading it with openpyxl and confirming the expected sheet and row count. Do NOT delete older backups -- let the folder accumulate history. The user can prune manually if it ever grows too large. If verification fails, alert the user that the write may have corrupted the file and point them to the most recent backup in `backups/`.
 9. **Check for Excel lock files.** Before writing, check for a lock file (`~$matter-tracker.xlsx`) in the same directory. If found, warn the user: "The tracker appears to be open in Excel (`~$matter-tracker.xlsx` lock file detected). Close it in Excel before I write, or the save may fail or corrupt the file." Wait for confirmation before proceeding.
 10. **Check for duplicates before adding.** Always run the Duplicate / Conflict Check before inserting a new matter row.
+11. **Search deep for new matters.** Do not limit Gmail search to 90 days for new matters. The user may be retroactively adding long-running files. Paginate through results until you find the earliest correspondence, or the user tells you to stop.
+12. **Always populate Next Action.** Every new, update, and close operation must set the Next Action / Deadline column. If no clear deadline exists, state the next procedural step.
+13. **Gmail first, then folder scan.** Gmail provides the primary timeline backbone (communications, instructions, scheduling). The folder scan supplements it with document-level evidence (filed originals, endorsements, executed agreements).
+14. **Read documents thoroughly.** Read every document that could contain a timeline event or client contact info. Always read engagement letters and intake forms (even if they seem purely administrative — they contain contact info). Skip only clear duplicates and purely administrative files (invoices, receipts).
+15. **Scope the folder scan by operation.** For update/close, only process files modified since the Last Activity date — don't re-read the entire folder history. For new matters, scan everything.
+16. **Handle multi-matter client folders.** If a client folder has subfolders for separate matters, scope the scan to the relevant subfolder. Match by matter description or keywords. If ambiguous, ask the user.
+17. **Always populate column U (Other Parties).** On every new, update, and close, extract the names of all non-client, non-opposing parties from emails and folder files and write them to column U. This is critical for conflict check coverage.
 
 ## Finding the Tracker
 
