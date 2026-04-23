@@ -11,7 +11,7 @@ Scan Gmail for recent emails, match them against open matters in the tracker, su
 
 ## Conventions
 
-- **"the lawyer"** refers to the user (you).
+- **"the lawyer"** refers to the user.
 - **"Client"** refers to the person/entity who retained you on a matter.
 
 ## Dependencies
@@ -67,7 +67,7 @@ Categorize each email as:
 For each matched email, assign a priority:
 
 **URGENT** (surface at top, with warning):
-- Email from a court or tribunal domain (configure your jurisdiction's court email domains in CLAUDE.md), or any email with "court" or "tribunal" in the domain
+- Email from a court address (`@court.example.gov`, `@superior-court.example.gov`, `@tribunal.example.gov`, `@rights-tribunal.example.gov`, any `.example.gov` domain, or any email with "court" or "tribunal" in the domain)
 - Email referencing a hearing date, trial date, or court appearance
 - Email containing the words "order", "endorsement", "judgment", or "ruling"
 - Email with a deadline or due date within 7 days
@@ -92,8 +92,7 @@ For each matched email, compare what was found in the email/thread against what'
 These fields are low-risk and objective. If the tracker field is blank and the email provides a clear value, write it directly to the tracker:
 
 - **Client Email (column M)**: If blank and the matched email is clearly from the client (not opposing counsel, not a court), fill it with the sender's email address.
-- **Opposing Party (column H)**: If blank and the email thread clearly identifies an opposing party by name (e.g., in a demand letter header, court filing, or "on behalf of [name]"), fill it.
-- **Other Parties (column U)**: If blank and the email thread identifies additional parties (co-plaintiffs, co-defendants, insurers, agents), fill it. Append to existing values if the column already has content.
+- **Other Parties (column U)**: If blank and the email thread identifies additional parties (co-plaintiffs, witnesses, insurers, agents) that are not themselves the opposing party, fill it. Append to existing values if the column already has content. Do NOT auto-fill anyone whose role might be adverse — that belongs in Opposing Party and goes through Surface for Review.
 
 After auto-filling, note what was added in the triage output (see Step 8 format) so the user is aware.
 
@@ -101,6 +100,7 @@ After auto-filling, note what was added in the triage output (see Step 8 format)
 
 These fields require judgment. Present them in the TRACKER GAPS section of the triage output for the user to approve:
 
+- **Opposing Party (column H)**: If blank and the email thread identifies an opposing party by name (in a demand letter header, court filing, or "on behalf of [name]" language), suggest the value. Do NOT auto-fill — Opposing Party feeds the conflict check, and a misidentified opposing party propagates into a structural error in the CRM. Surface the suggestion with one line of evidence (e.g., "Suggested opposing party: Globex Inc. — from the opposing counsel demand letter Mar 14 2026").
 - **Matter Description (column C)**: If the current description is vague or generic (e.g., just "Dispute" or "Legal matter") and the email thread reveals specifics (property address, claim type, transaction details), suggest an updated description.
 - **Next Action (column I)**: If blank and the email thread implies an obvious next step (e.g., "please review and sign" → next action: "Review and sign documents"), suggest it.
 - **Limitation Deadline (column R)**: If blank and the email thread references a limitation period or incident date from which one can be calculated, flag it with the suggested date and reasoning.
@@ -112,8 +112,10 @@ Use openpyxl to write auto-fill values directly to the tracker file. Load with `
 Keep a running list of all changes made for the triage summary. Format:
 ```
 Auto-filled: 2026-012 | Smith — added client email (jsmith@example.com)
-Auto-filled: 2026-031 | Acme Corp — added opposing party (Globex Inc.)
+Auto-filled: 2026-031 | Acme Corp — added other party (witness: Jane the opposing counsel)
 ```
+
+Opposing Party (column H) is NOT auto-filled. When a suggested opposing party is detected, include it in the TRACKER GAPS section of the triage output for the user to approve — do not write to the tracker until confirmed.
 
 ### Step 6 — Review Tracker for Alerts
 
@@ -136,10 +138,10 @@ This is the most important step for unmatched emails. Instead of dumping them as
 To catch these: before presenting the Inbox Review, re-scan the unmatched list one more time against the tracker using **broader matching** — check not just the sender name but also any names, company names, or addresses mentioned in the email body or subject against all tracker columns (B, C, H, U). If a match is found on this second pass, move the email to the appropriate matched section instead. Only truly unmatched emails should reach the Inbox Review.
 
 **Category A — Active Matters (Not Tracked)**
-Emails where you are clearly already acting as counsel — there is substantive legal correspondence, instructions given, work product exchanged — but the matter does not appear in the tracker. These are matters that should already be open but aren't.
+Emails where the lawyer is clearly already acting as counsel — there is substantive legal correspondence, instructions given, work product exchanged — but the matter does not appear in the tracker. These are matters that should already be open but aren't.
 
 Signals:
-- You have replied with legal advice, a draft document, or strategic direction
+- you have replied with legal advice, a draft document, or strategic direction
 - Thread contains retainer/engagement language or fee discussion
 - Thread references a court file number, opposing party, or claim
 - Multiple back-and-forth emails (not a one-off inquiry)
@@ -149,7 +151,7 @@ Emails from someone who appears to be a new or prospective client discussing a l
 
 Signals:
 - Sender describes a legal problem and asks for help
-- You have responded with substantive guidance (not just "call me")
+- you have responded with substantive guidance (not just "call me")
 - Referral from another lawyer or referral platform with real case details
 - Fee/retainer discussion has begun
 - Client has sent supporting documents (contracts, court filings, screenshots)
@@ -159,7 +161,7 @@ Emails from potential clients who have made contact but where there is no indica
 
 Signals:
 - First-contact email asking about services or describing a problem, but you haven't substantively responded yet
-- Referral platform notification — lead only
+- Referral platform notification (Lawyer.com, LawTap, etc.) — lead only
 - Website contact form submission
 - Someone asking "do you handle [X]?" or requesting a consultation
 - No fee discussion, no retainer, no documents exchanged
@@ -215,7 +217,7 @@ TRACKER UPDATES (auto-filled)
 ========================================
 TRACKER GAPS (needs your call)
 ========================================
-[If any fields need your review from Step 5:]
+[If any fields need the lawyer's review from Step 5:]
 - 2026-045 | Beta Ltd — Description is generic ("Dispute"). Suggest: "Commercial lease termination — 123 Main St"
 - 2026-008 | Lee — Limitation deadline appears to be 2026-09-15 (2-year from incident date 2024-09-15 per email thread). Add it? [y/n]
 
@@ -229,7 +231,7 @@ TRACKER ALERTS
 - 2026-044 | Chen — Limitation expires 2026-11-15 (240 days)
 
 [Court deadlines within 30 days:]
-- 2026-019 | Davis — Settlement conference 2026-04-02 (13 days)
+- 2026-019 | Smith — Settlement conference 2026-04-02 (13 days)
 
 [Stale matters (no activity > 21 days):]
 - 2026-008 | Lee — Last activity 2026-02-15 (33 days ago)
@@ -246,13 +248,13 @@ INBOX REVIEW
 ACTIVE MATTERS — NOT IN TRACKER
 These are matters where you are already acting. They should be tracked.
 
-  [1] Rivera / Delta Fitness — Globex dispute
-      rivera@example.com | 3 emails today | You drafted a response to the demand letter
+  [1] Rivera / Delta Fitness — Globex Inc. dispute
+      rivera@example.com | 3 emails today | You drafted a response to the opposing counsel's demand letter
       → Ready to open: "new matter Delta Fitness"
 
   [2] Taylor Ross / MedCo — Physician NDA
       tross@example.com | Confidentiality agreement finalized and sent today
-      → Ready to open: "new matter Ross"
+      → Ready to open: "new matter Evans"
 
 NEW CLIENTS — INTAKE UNDERWAY
 Retention appears confirmed or near-confirmed based on correspondence.
@@ -264,7 +266,7 @@ Retention appears confirmed or near-confirmed based on correspondence.
 LEADS — NOT YET RETAINED
 First contact only. Follow up or pass.
 
-  [4] Referral platform lead — Condo building defect (construction/real estate)
+  [4] Lawyer.com referral — Condo building defect (construction/real estate, ON)
       Via referrals@example.com | Mold and water infiltration issue
       → Outside practice area? Skip or respond to decline.
 
@@ -279,10 +281,10 @@ To skip an item, just leave it out. You can always open it later with "new matte
 
 After the user responds to the decision list:
 
-1. **For each selected number**: Confirm the client name that will be passed to the matter-tracker skill. The triage does NOT open the matter itself — it tells the user to run the command.
+1. **For each selected number**: Confirm the client name that will be passed to the matter-tracker skill. The triage does NOT open the matter itself — it tells the lawyer to run the command.
    - Example response: "Got it. Run these to open them:"
      - `new matter Delta Fitness` (Rivera — Globex dispute)
-     - `new matter Ross` (Taylor — MedCo NDA)
+     - `new matter Evans` (Wayne — MedCo NDA)
      - `new matter Kim` (Alex — lease dispute)
 
 2. **For skipped items**: No action needed. They stay in Gmail and will surface again in the next triage if still unmatched.
@@ -303,9 +305,9 @@ After the user responds to the decision list:
 8. **Suggest but don't nag.** If stale matters or blank fields are found, mention them once. Don't repeat alerts the user has already seen in a previous triage.
 9. **Gmail unavailable fallback.** If Gmail MCP tools aren't available, skip the email scan entirely and just run the tracker review (Step 6 alerts only). Tell the user: "Gmail tools not available — showing tracker alerts only." Steps 2-5 and 7 are skipped because they depend on email data.
 10. **Classify, don't just list.** The Inbox Review section must categorize unmatched emails into A/B/C/D. Never present unmatched emails as a flat undifferentiated list. The categories exist to save decision-making energy — use the thread content to classify accurately.
-11. **Category D stays quiet.** Non-legal emails (personal, newsletters, marketing, billing confirmations, spam) should never be listed individually. State the count and move on. The user does not need to see "LinkedIn — 3 new notifications" in a legal triage.
+11. **Category D stays quiet.** Non-legal emails (personal, newsletters, marketing, billing confirmations, spam) should never be listed individually. State the count and move on. the user does not need to see "LinkedIn — 3 new notifications" in his legal triage.
 12. **Closed matter matches.** If an unmatched email matches a recently closed matter (within 30 days), flag it explicitly: "Matches closed matter 2026-043 (Miller, closed Mar 17)." This may indicate follow-up activity on a matter the user thought was done, or a returning client.
 13. **Number the actionable items.** Categories A, B, and C must be presented as a single numbered list (not three separate numbered lists). This lets the user respond with "1, 3, 5" without ambiguity.
 14. **One-line summaries with context.** Each numbered item gets: sender name + email, a one-line description of what the thread is about, and why it's in this category (e.g., "You drafted a response" or "First contact, no reply yet"). This gives the user enough to decide without re-reading the email.
 15. **Auto-fill confidence threshold.** Only auto-fill a field when the match is unambiguous. If the matched email could be from the client OR a third party (e.g., a paralegal forwarding on behalf of a client), don't auto-fill — surface it in TRACKER GAPS instead. When in doubt, ask rather than write.
-16. **Handle gap approvals inline.** If the user approves a suggested gap fill (e.g., responds "yes" to a limitation deadline suggestion), write it to the tracker immediately using the same openpyxl approach. No need to run `update matter` for a single field fix.
+16. **Handle gap approvals inline.** If the lawyer approves a suggested gap fill (e.g., responds "yes" to a limitation deadline suggestion), write it to the tracker immediately using the same openpyxl approach. No need to run `update matter` for a single field fix.

@@ -14,7 +14,9 @@ This project is a legal matter tracking system backed by an Excel spreadsheet (`
 |-------|---------|
 | `daily-triage` | Scan Gmail for new emails, match to open matters, surface urgent items, present a prioritised triage summary |
 | `matter-tracker` | Open, update, and close matters — pulls from Gmail + client folders to build timelines, runs conflict checks, maintains the spreadsheet |
-| `work-on-matter` | Load context for an existing matter at session start so you can pick up where you left off |
+| `work-on-matter` | Load context for an existing matter at session start, do substantive work with source-first drafting and privilege screening, and keep the tracker current inline |
+| `calendar-sync` *(helper)* | Push, update, and cancel deadline events on a dedicated "Key Dates" Google Calendar. Invoked internally by the other skills |
+| `overdue-triage` | Periodic sweep of all open matters to reconcile stale / expired deadlines against reality |
 
 ## Configuration
 
@@ -67,3 +69,14 @@ If your firm uses a third-party identity verification service, specify it here. 
 ```
 ID_VERIFICATION_SERVICE: [e.g., Verified.Me, Jumio, or "manual" for in-person verification]
 ```
+
+### Calendar Sync *(optional — used by `calendar-sync` skill)*
+
+If you want deadlines pushed to Google Calendar, create a dedicated "Key Dates" calendar and paste its ID below. The calendar's notification settings drive the reminder schedule (recommended default: 14 / 7 / 2 / 0 days before for all-day events).
+
+```
+KEY_DATES_CALENDAR_ID: <your-key-dates-calendar-id>@group.calendar.google.com
+TIMEZONE: <your-iana-timezone>   # e.g., America/New_York
+```
+
+Finding the ID: Google Calendar → Settings → select the calendar → "Integrate calendar" → "Calendar ID". Requires a Google Calendar MCP server connected to Claude.

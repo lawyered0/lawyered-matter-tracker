@@ -17,12 +17,15 @@ A practice management system for solo and small law firms, powered by [Claude](h
 
 - [Claude Desktop](https://claude.ai/download) or [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
 - **Gmail MCP server** connected — the skills pull emails to build timelines and run triage. Without it, the skills still work but fall back to folder-only scanning.
+- **Google Calendar MCP server** connected *(optional, for calendar-sync)* — pushes limitation dates, court deadlines, and follow-ups to a dedicated "Key Dates" Google Calendar. Skill falls back gracefully if not connected.
 
 ## Setup
 
 ### 1. Install the skills
 
-Install the three skills from this repo through Claude's UI, or import them from the `skills/` directory.
+Install the five skills from this repo through Claude's UI, or import them from the `skills/` directory.
+
+> **Want Clio integration?** There's a [Clio-integrated variant of this repo](https://github.com/lawyered0/lawyered-matter-tracker-clio) that adds one-way sync from the tracker to [Clio Manage](https://www.clio.com/ca/clio-manage/) via the [clio-mcp](https://github.com/lawyered0/clio-mcp) server. Use that one instead if you want matters to appear in Clio automatically.
 
 ### 2. Set up your client directory
 
@@ -53,22 +56,30 @@ The tracker spreadsheet is created automatically the first time you open a new m
 
 ## How It Works
 
-Three Claude skills handle the core workflows:
+Five Claude skills handle the core workflows:
 
 | Skill | What It Does |
 |-------|-------------|
 | `daily-triage` | Scans Gmail for new emails, matches them to open matters, surfaces urgent items, auto-fills missing tracker fields, and presents a prioritised triage summary |
 | `matter-tracker` | Opens, updates, and closes matters by pulling from Gmail + client folder files to build timelines. Runs conflict checks, tracks limitation periods, and maintains the Excel tracker |
-| `work-on-matter` | Loads context for an existing matter at the start of a work session — reads the tracker row + a per-matter brief file so you can pick up where you left off |
+| `work-on-matter` | Loads context for an existing matter at the start of a work session — reads the tracker row + a per-matter brief file so you can pick up where you left off. Includes source-first drafting, pre-send sourcing checks, an instruction ledger for substantive drafts, and a privilege screen on outbound communications |
+| `calendar-sync` *(helper)* | Pushes limitation dates, court deadlines, and follow-ups to a dedicated "Key Dates" Google Calendar. Invoked internally by `matter-tracker` and `work-on-matter` — not user-facing. Requires a Google Calendar MCP server |
+| `overdue-triage` | The periodic deep sweep. Reviews every open matter for past-date items across Next Action (col I), Limitation Deadline (col R), and Court Deadlines (col S); investigates each, confirms with you one item at a time, and applies approved changes in a single batched write. Meant to run every few weeks |
 
 ### Daily Triage
 Searches Gmail for recent emails, matches them against open matters by name/email/keyword, classifies urgency (court emails are always urgent), and presents a scannable summary. Auto-fills missing contact info when confident. Categorises unmatched emails into: active matters not yet tracked, new client inquiries, leads, and non-legal.
 
 ### Matter Tracker
-The CRM engine. "New matter Smith" triggers a full Gmail search + folder scan, builds a timeline, runs a conflict check, and adds the matter to the spreadsheet. "Update matter Smith" pulls new activity since the last update. "Close matter Smith" finalises and archives. Always confirms before writing.
+The CRM engine. "New matter Smith" triggers a full Gmail search + folder scan, builds a timeline with a SUMMARY header, runs a conflict check, and adds the matter to the spreadsheet. "Update matter Smith" pulls new activity since the last update. "Close matter Smith" finalises and archives. Always confirms before writing.
 
 ### Work on Matter
-Fast context loading. "Let's work on Smith" reads the tracker row and a `_matter-brief.md` file from the matter folder. After you do substantive work (review documents, draft letters, give advice), it saves a brief so the next session can pick up instantly.
+Fast context loading. "Let's work on Smith" reads the tracker row and a `_matter-brief.md` file from the matter folder. As you do substantive work (review documents, draft letters, give advice), the skill saves a brief and updates the tracker inline so the next session can pick up instantly. Includes source-first drafting guardrails (every dollar figure, section reference, and party name gets confirmed against the source document before it lands in client-facing output) and a privilege screen that catches internal reasoning bleeding into outbound comms.
+
+### Calendar Sync *(helper, not user-facing)*
+Projects the tracker onto a dedicated Google Calendar. Court deadlines, limitation dates, follow-ups, and third-party pings each get a colour-coded event with a 14/7/2/0-day reminder schedule. The tracker is the source of truth; the calendar is a read-only projection.
+
+### Overdue Triage
+The monthly (or quarterly) sweep. Walks every open matter, finds past-date items in the deadline columns, searches Gmail and the matter folder to figure out which ones were actually dealt with, and confirms each one with you before a single batched write. Items that look genuinely unresolved get surfaced as a red-flag list with suggested next actions.
 
 ## Spreadsheet Schema
 
@@ -85,7 +96,7 @@ The tracker uses two sheets ("Open Matters" and "Closed Matters") with these col
 | G | Last Activity | Updated on every interaction |
 | H | Opposing Party | If applicable |
 | I | Next Action / Deadline | Key upcoming step |
-| J | Timeline | Chronological log with SUMMARY header |
+| J | Timeline | Substantive SUMMARY header + chronological log |
 | K | Client ID Verified | Checkmark or Pending |
 | L | Conflict Check Done | Checkmark or Pending |
 | M-O | Client Email/Phone/Address | Contact info |
@@ -95,6 +106,7 @@ The tracker uses two sheets ("Open Matters" and "Closed Matters") with these col
 | S | Court Deadlines | JSON array of bespoke deadlines |
 | T | Matter Folder | Subfolder name for client files |
 | U | Other Parties | For conflict check coverage |
+| V | Matter Type | Free-text classification (Litigation / Solicitor / Transactional / etc.) |
 
 ## Optional: Web Dashboard
 
