@@ -65,7 +65,7 @@ Every event uses the same structure.
 - `{short_description}` is ≤ 60 chars, plain language. No legalese.
 
 Examples:
-- `[2026-070 | Smith] Court — Defence deadline (TSCC <case#>)`
+- `[2026-070 | Smith] Court — Defence deadline (<court case ref>)`
 - `[2026-070 | Smith] LIMITATION — 2-yr limitations expiry`
 - `[2026-070 | Smith] Follow-up — Call Small Claims trial coordinator`
 - `[2026-070 | Smith] 3P Follow-up — Ping the defence lawyer re defence`
@@ -88,7 +88,7 @@ Deadline: {YYYY-MM-DD}
 
 {full deadline description — one paragraph, no line breaks needed}
 
-Source: {e.g., "March 12 endorsement", "Rule 1.03 — 30 days before trial", "limitations statute, s.4", "Tracker Next Action"}
+Source: {e.g., "March 12 endorsement", "the applicable procedural rule — 30 days before trial", "limitations statute, s.4", "Tracker Next Action"}
 Matter folder: {column T value or "not set"}
 
 Last synced: {ISO timestamp}
@@ -165,7 +165,7 @@ After saving, call `cancel_all_for_matter(file_number)`. Confirm: "Cancelled N e
 
 When the inline tracker write changes Next Action (column I) to a new dated value, call `upsert_deadline(..., category="FUP", ...)`.
 
-When the work surfaces a third-party prompt (e.g. "follow up with Tony Bui on April 22 if no response"), call `upsert_deadline(..., category="TFUP", slug=<derived from description>, ...)`. The caller is responsible for deciding that a TFUP event is warranted — not every mention of a person merits a calendar nudge. Good signal: there is a specific date and a specific action. Bad signal: "should probably check in with her sometime."
+When the work surfaces a third-party prompt (e.g. "follow up with Jane Doe on April 22 if no response"), call `upsert_deadline(..., category="TFUP", slug=<derived from description>, ...)`. The caller is responsible for deciding that a TFUP event is warranted — not every mention of a person merits a calendar nudge. Good signal: there is a specific date and a specific action. Bad signal: "should probably check in with her sometime."
 
 When the user resolves an item, call `cancel_deadline(file#, category, slug)`.
 
@@ -173,7 +173,7 @@ When the user resolves an item, call `cancel_deadline(file#, category, slug)`.
 
 - **Never push a deadline in the past.** Skip any entry where date ≤ today.
 - **One LIM event per file.** If the limitation deadline changes, `upsert_deadline` updates in place.
-- **One FUP event per file.** Column I is a single next-action field; the calendar mirrors that. If the user changes Next Action from "Call coordinator" to "Serve Form 1B", the old FUP event is updated in place.
+- **One FUP event per file.** Column I is a single next-action field; the calendar mirrors that. If the user changes Next Action from "Call coordinator" to "Serve the required court form", the old FUP event is updated in place.
 - **Multiple COURT events per file.** Each entry in column S JSON gets its own event, slugged by description.
 - **TFUP events are independent of reconcile.** They only get added/cancelled via explicit calls. This prevents a tracker update from wiping ad-hoc prompts that aren't in any tracker column.
 - **Closed matters have zero events.** Close always cancels everything.

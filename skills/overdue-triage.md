@@ -113,7 +113,7 @@ For each matter in a batch:
      - Court deadline "Serve defendants by 2026-04-10" and folder has "Affidavit of Service - 2026-04-08.pdf". Resolved.
      - Next Action "2026-03-19: 7-day cure period expires" and Gmail shows a settlement agreement signed 2026-03-18. Resolved (mooted by settlement).
      - Overdue limitation and an issued claim is in the folder (file starts with court file number or contains "Issued" / "Form 7A"). Likely resolved (claim was filed); flag for "claim filed" confirmation.
-   - **Unresolved evidence**: no activity, no reference, or explicit signs the task wasn't done. Example: "Serve Form 1B on defendants by 2026-04-10" with no affidavit of service, no email about service, and no acknowledgment from opposing counsel. Unresolved.
+   - **Unresolved evidence**: no activity, no reference, or explicit signs the task wasn't done. Example: "Serve the required court form on defendants by 2026-04-10" with no affidavit of service, no email about service, and no acknowledgment from opposing counsel. Unresolved.
    - **Ambiguous**: unclear. Default to treating as unresolved (safer) and flag it for the lawyer to decide.
 
 **Scaled limitation pattern.** If the scan produced ≥5 overdue limitations AND the investigation evidence for those matters shows a court file number or issued claim in Gmail/folder (meaning the claim was clearly filed), present them together in the confirmation step as a bulk batch: "Found N limitation deadlines that appear resolved (claim filed in all cases based on court file numbers in Gmail). Review and bulk-approve?" Still gate on the lawyer confirmation. Never auto-clear a limitation. But one confirmation for N items beats N confirmations.
@@ -156,7 +156,7 @@ Track each item's outcome in an in-memory structure:
 ```python
 decisions = [
     {"file_no": "2026-012", "type": "court_deadline", "index": 0, "action": "resolve",
-     "timeline_entry": "Served Form 1B on defendants", "date": "2026-04-08"},
+     "timeline_entry": "Served the required court form on defendants", "date": "2026-04-08"},
     {"file_no": "2026-012", "type": "next_action", "action": "resolve",
      "new_next_action": "2026-05-15: Motion for summary judgment",
      "timeline_entry": "Settlement conference held; no settlement reached"},
@@ -175,8 +175,8 @@ Before making any write, show the lawyer exactly what's about to change:
 Ready to batch-apply changes. Here's what I'll write:
 
 RESOLVED (N items):
-  * File #2026-012 (Chen): remove court deadline "Serve Form 1B" (2026-04-10)
-    Timeline += "2026-04-08: Served Form 1B on defendants"
+  * File #2026-012 (Chen): remove court deadline "Serve the required court form" (2026-04-10)
+    Timeline += "2026-04-08: Served the required court form on defendants"
   * File #2026-012 (Chen): update Next Action to "2026-05-15: Motion for summary judgment"
     Timeline += "2026-03-27: Settlement conference held; no settlement reached"
   * File #2026-015 (Acme Corp): remove court deadline "Amend claim" (2026-03-25)
@@ -254,7 +254,7 @@ LIMITATION EXPIRED (HIGHEST PRIORITY):
 
 COURT DEADLINES PAST DATE:
   * File #2026-019: Smith, J.
-    Deadline: "Serve Form 1B on defendants", was 2026-04-10 (9 days ago)
+    Deadline: "Serve the required court form on defendants", was 2026-04-10 (9 days ago)
     Last activity: 2026-03-15 (35 days ago)
     > Suggested action: Confirm service status. If not served, serve immediately and disclose late service to the court. If served, run "update matter Smith" to log the service date.
 
@@ -274,7 +274,7 @@ STALE BUT NOT OVERDUE:
 **Suggested action writing rules:**
 - Be specific. "Follow up" is not a suggestion. Name who to contact, what to check, and what the next procedural step is.
 - For limitation expiries, always flag malpractice exposure analysis. Never minimize.
-- For service deadlines, always mention the rule 3.02 relief-from-consequences option if the deadline was missed.
+- For service deadlines, always mention the the applicable relief-from-consequences rule relief-from-consequences option if the deadline was missed.
 - For court deadlines tied to endorsements, suggest checking the order text to see if the court attached consequences (e.g., "failure to serve results in dismissal").
 - Match the lawyer's preference: no em dashes, no sugar-coating.
 
@@ -303,10 +303,10 @@ A concise reference for writing the red-flag list. Use these as templates. Custo
 
 | Scenario | Template suggested action |
 |----------|--------------------------|
-| Limitation expired, no claim filed | "URGENT: Limitation expired [N] days ago. Confirm non-filing. If confirmed, conduct s. 5 limitations statute discovery analysis for any late-filing argument. Notify insurer if exposure exists. Consider s. 21 discoverability defence in the alternative." |
-| Court deadline missed (service) | "Confirm service status. If not served, serve immediately. Assess whether rule 3.02 relief from consequences is needed. Notify opposing counsel of late service and confirm no prejudice." |
+| Limitation expired, no claim filed | "URGENT: Limitation expired [N] days ago. Confirm non-filing. If confirmed, conduct a limitations-statute discovery analysis for any late-filing argument. Notify insurer if exposure exists. Consider the discoverability defence in the alternative." |
+| Court deadline missed (service) | "Confirm service status. If not served, serve immediately. Assess whether the applicable relief-from-consequences rule relief from consequences is needed. Notify opposing counsel of late service and confirm no prejudice." |
 | Court deadline missed (filing) | "Confirm filing status. If not filed, file now with an explanation letter to the court. Check for any default proceedings initiated by opposing counsel." |
-| Court deadline missed (endorsement compliance) | "Check the endorsement text for automatic consequences. If the endorsement attached consequences (e.g., dismissal, striking of claim), assess rule 37.14 motion to set aside. Notify client immediately." |
+| Court deadline missed (endorsement compliance) | "Check the endorsement text for automatic consequences. If the endorsement attached consequences (e.g., dismissal, striking of claim), assess the applicable civil procedure rule motion to set aside. Notify client immediately." |
 | Next Action: settlement conference passed | "Log conference outcome (result, positions taken, next steps). If ordered to a further step, add to court deadlines. If settled, proceed to close." |
 | Next Action: cure period expired | "Confirm whether breach was cured. If cured, note and proceed. If not, file for judgment per the agreement. Client decision needed." |
 | Next Action: client instructions overdue | "Follow up with client directly (phone, not email). If no response after [7 days], send formal written follow-up. If still no response, consider terminating the retainer per the engagement letter." |

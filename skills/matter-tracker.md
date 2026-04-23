@@ -196,7 +196,7 @@ Column S stores court-ordered deadlines as a JSON array. Each entry has three fi
 ```json
 [
   {"date": "2026-03-25", "description": "Amend claim to add corporation", "source": "March 12 endorsement"},
-  {"date": "2026-04-27", "description": "Serve Form 1B on defendants", "source": "Rule 1.03 — 30 days before trial"}
+  {"date": "2026-04-27", "description": "Serve the required court form on defendants", "source": "the applicable procedural rule — 30 days before trial"}
 ]
 ```
 

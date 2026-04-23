@@ -136,15 +136,15 @@ Produce an inline table in chat before the output goes out:
 
 | Claim | Source | Confidence |
 |-------|--------|------------|
-| Purchase price $140,000 | APS Form 502, Dec 5 2025, s.1 | verified |
-| Closing date Apr 21 2026 | Amendment Form 570, Feb 13 2026 | verified |
+| Purchase price $140,000 | Purchase Agreement, Dec 5 2025, s.1 | verified |
+| Closing date Apr 21 2026 | Amendment Agreement, Feb 13 2026 | verified |
 | Jane Doe acts for Seller | Lease Assignment signature block; Apr 2 14:04 email | verified |
-| Hunter's director status | [TBC — corporate profile stale since Feb 2024] | unverified |
-| 400,000 shares transferred Neil → Hunter | [inferred from 900/100 register vs 500/500 certs] | inferred |
+| Director Smith's director status | [TBC — corporate profile stale since Feb 2024] | unverified |
+| 400,000 shares transferred Doe → Smith | [inferred from 900/100 register vs 500/500 certs] | inferred |
 
 One row per factual claim in the output. Claims include: dates, dollar figures, section or clause cites, party names, addresses, roles, and any quoted or paraphrased text from a source document. Generic legal reasoning and statutory cites that do not depend on matter-specific facts do not need rows.
 
-Rows marked "inferred" or "unverified" block the send. the lawyer either (a) confirms the inference in writing, (b) resolves the claim to a verified source, or (c) rewrites the output to remove or soften the claim. Do not send output with unresolved rows.
+Rows marked "inferred" or "unverified" block the send. The lawyer either (a) confirms the inference in writing, (b) resolves the claim to a verified source, or (c) rewrites the output to remove or soften the claim. Do not send output with unresolved rows.
 
 Tedious the first time, fast by the fifth deliverable. This is the artifact that would have caught: a wrong name before it landed in a disclosure schedule, a wrong role before it landed in a cover email, a wrong fact before it landed in a demand letter.
 
@@ -162,9 +162,9 @@ Format (inline in chat before the draft lands):
 | s.5.4 sanctions rep | [lawyer-side professional-obligation item] | discretionary |
 | s.2.8 cash-sweep carve-out | Client Q5 answer Apr 18 2026 | instructed |
 
-Items marked "discretionary" — substantive additions the client did not ask for — get listed separately for the lawyer's sign-off before the draft goes out. the lawyer can accept each one, strip it, or reword.
+Items marked "discretionary" — substantive additions the client did not ask for — get listed separately for the user's sign-off before the draft goes out. The lawyer can accept each one, strip it, or reword.
 
-The purpose is not to forbid discretionary additions (they are often necessary and defensible) but to make them visible so the lawyer can decide what to include in a transaction where the client has said "no negotiation" or where buyer friction is a known risk.
+The purpose is not to forbid discretionary additions (they are often necessary and defensible) but to make them visible so the user can decide what to include in a transaction where the client has said "no negotiation" or where buyer friction is a known risk.
 
 #### Privilege Screen
 
@@ -177,7 +177,7 @@ Examples of what should flag:
 - Draft to counterparty reads "client accepts the risk of Y" where Y came from a written client instruction to proceed despite Y
 - Draft paraphrases the lawyer's own advice ("my lawyer thinks the strongest argument is…")
 
-Output format: a short list inline in chat before the send, one line per flagged phrase with the matching brief entry. the lawyer approves each item or rewords. The skill does not auto-block — the lawyer may have a reason to include material — but it surfaces.
+Output format: a short list inline in chat before the send, one line per flagged phrase with the matching brief entry. The lawyer approves each item or rewords. The skill does not auto-block — The lawyer may have a reason to include material — but it surfaces.
 
 Why this matters: briefs contain material that, if accidentally paraphrased outward, kills leverage or concedes issues the client has not authorized conceding. This screen is cheap and catches the category of error where a briefing note bleeds into a cover email without conscious thought.
 
@@ -223,7 +223,7 @@ After the inline tracker write succeeds, keep Key Dates in step with what you ju
 
 **Case 1 — Next Action (column I) changed to a new dated entry.** Call `calendar-sync.upsert_deadline` with `category="FUP"`, `slug="nextaction"`, the new date, and the new description. If the Next Action is now undated (or empty), call `calendar-sync.cancel_deadline` with `category="FUP"`, `slug="nextaction"` to clear the previous follow-up event.
 
-**Case 2 — A third-party follow-up surfaced during the work.** Example: "Need to ping the defence lawyer on April 22 if no defence is filed." Or "Follow up with Tony Bui by Friday re insurer coverage." When you set a specific date and specific action against a third party (opposing counsel, insurer, adjuster, court clerk, expert), call `calendar-sync.upsert_deadline` with `category="TFUP"`, a descriptive slug (e.g., `slug="barrow-defence-check"`), the date, and the description.
+**Case 2 — A third-party follow-up surfaced during the work.** Example: "Need to ping the defence lawyer on April 22 if no defence is filed." Or "Follow up with Jane Doe by Friday re insurer coverage." When you set a specific date and specific action against a third party (opposing counsel, insurer, adjuster, court clerk, expert), call `calendar-sync.upsert_deadline` with `category="TFUP"`, a descriptive slug (e.g., `slug="doe-defence-check"`), the date, and the description.
 
 **Good signal for a TFUP event:** there is a concrete date AND a concrete action to take on that date. "Check in with her sometime" is not a TFUP; "Email her April 22 if no defence" is.
 

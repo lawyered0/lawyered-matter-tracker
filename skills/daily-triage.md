@@ -161,7 +161,7 @@ Emails from potential clients who have made contact but where there is no indica
 
 Signals:
 - First-contact email asking about services or describing a problem, but you haven't substantively responded yet
-- Referral platform notification (Lawyer.com, LawTap, etc.) — lead only
+- Referral platform notification — lead only
 - Website contact form submission
 - Someone asking "do you handle [X]?" or requesting a consultation
 - No fee discussion, no retainer, no documents exchanged
@@ -194,7 +194,7 @@ NEW ACTIVITY ON OPEN MATTERS
 
 2026-012 | Smith — Damage deposit claim
   - 2 new emails:
-    • From: opposing counsel (jane.doe@lawfirm.ca) — "Re: Settlement proposal" (10:15 AM)
+    • From: opposing counsel (jane.doe@lawfirm.example) — "Re: Settlement proposal" (10:15 AM)
     • From: court clerk — "Notice of Trial Date" (9:41 AM)
   - Suggested action: Read court email; respond to settlement proposal
 
@@ -266,7 +266,7 @@ Retention appears confirmed or near-confirmed based on correspondence.
 LEADS — NOT YET RETAINED
 First contact only. Follow up or pass.
 
-  [4] Lawyer.com referral — Condo building defect (construction/real estate, ON)
+  [4] Referral platform lead — Condo building defect (construction/real estate)
       Via referrals@example.com | Mold and water infiltration issue
       → Outside practice area? Skip or respond to decline.
 
