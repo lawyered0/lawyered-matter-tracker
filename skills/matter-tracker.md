@@ -217,7 +217,7 @@ Column U captures every person or entity involved in the matter who is NOT the c
 - Process servers, adjusters, mediators
 - Family members or related individuals (e.g., "brought on behalf of" parties)
 
-**Format**: Comma-separated names. Include role context where helpful: "Jane Rivera (co-plaintiff/witness), Zohreh Hemati (opposing counsel, Hemati Law)".
+**Format**: Comma-separated names. Include role context where helpful: "Sam Torres (co-plaintiff/witness), Lin Park (opposing counsel, Park Law)".
 
 **Why this matters**: The conflict check searches this column. If a future prospective client's name appears here, the user is alerted before opening a file that could create a conflict.
 
@@ -353,7 +353,7 @@ Before adding a new matter, **always run a full conflicts check** against the ex
    - **If the matter involves a claim**: ask about discovery date and limitation statute; populate columns P-R. Flag if limitation is within 6 months.
    - **If the matter is transactional/advisory**: leave columns P-R blank.
    - Leave Court Deadlines (S) blank unless folder files or emails reveal a specific court-ordered deadline.
-   - **Matter Folder (T)**: Search the workspace directory for a subfolder matching the client. **All matching must be case-insensitive.** First, dump the full directory listing to a text file using `ls -1 > /tmp/dirlist.txt`, then grep against that file — this avoids shell issues with special characters (colons, ampersands, parentheses, etc.) in folder names. Try matching against ALL of these permutations of the client name: "First Last" (e.g. "wayne evans"), "Last, First" (e.g. "Evans, Wayne"), "Last First" (no comma), just the last name, just the first name, and any company/entity name from the matter description or opposing party field. **Also search for the mother/father/third-party name if the matter is brought on someone else's behalf** (e.g. for "Geck v. Oickle" brought by Deborah Newton on behalf of May Geck, search for "Newton", "Deborah", "Geck", and "May"). Folders are often named in lowercase or informal formats (e.g. "wayne evans" not "Evans, Wayne"), or after the entity rather than the person (e.g. "Globex Inc." not "Smith, John"), and frequently contain special characters like colons (e.g. "Deborah Newton : Geck"). Cast a wide net — grep each search term separately and case-insensitively against the text file listing. If found, write just the subfolder name exactly as it appears on disk. If not found, leave blank.
+   - **Matter Folder (T)**: Search the workspace directory for a subfolder matching the client. **All matching must be case-insensitive.** First, dump the full directory listing to a text file using `ls -1 > /tmp/dirlist.txt`, then grep against that file — this avoids shell issues with special characters (colons, ampersands, parentheses, etc.) in folder names. Try matching against ALL of these permutations of the client name: "First Last" (e.g. "alex chen"), "Last, First" (e.g. "Chen, Alex"), "Last First" (no comma), just the last name, just the first name, and any company/entity name from the matter description or opposing party field. **Also search for the mother/father/third-party name if the matter is brought on someone else's behalf** (e.g. for "Kim v. Walsh" brought by Carol Yang on behalf of Mei Kim, search for "Yang", "Carol", "Kim", and "Mei"). Folders are often named in lowercase or informal formats (e.g. "alex chen" not "Chen, Alex"), or after the entity rather than the person (e.g. "Green Media Co" not "Martin, Robin"), and frequently contain special characters like colons (e.g. "Carol Yang : Kim"). Cast a wide net — grep each search term separately and case-insensitively against the text file listing. If found, write just the subfolder name exactly as it appears on disk. If not found, leave blank.
 7. Save the updated tracker to disk.
 8. **Calendar sync**: Invoke the `calendar-sync` skill's `reconcile(new_row)` for this matter. This pushes any limitation date (column R), court deadlines (column S), and dated Next Action (column I) to the Key Dates calendar with the appropriate reminder schedules. Report back to the user: "Pushed N events to Key Dates." If calendar-sync is unavailable, skip this step and note it once — do not block the tracker write.
 
@@ -666,10 +666,10 @@ Omit any section that doesn't apply (e.g., skip "Key Terms" for a litigation mat
 
 ```
 ## Roles
-- Ben Milosevski (Landlord principal, Cosa-Nova Fashions Ltd.) — source: Lease Assignment executed Apr 7 2026, recital A
-- Jane Doe (counsel for Assignor / Seller, Omega Corp) — source: signature block of Lease Assignment; confirmed Apr 2 14:04 ET email
-- Rita Mok (Cosa-Nova Controller) — source: Apr 17 11:39 email re security deposit wire
-- KRB Lawyers Inc. (counsel of record for Landlord) — source: s.2.8.1(c) of Lease Assignment
+- James Patterson (Landlord principal, Metro Fashions Ltd.) — source: Lease Assignment executed Apr 7 2026, recital A
+- Wei Zhang (counsel for Assignor / Seller, 9876543 Corp.) — source: signature block of Lease Assignment; confirmed Apr 2 14:04 ET email
+- Rita Chen (Metro Fashions Controller) — source: Apr 17 11:39 email re security deposit wire
+- Sterling Lawyers Inc. (counsel of record for Landlord) — source: s.2.8.1(c) of Lease Assignment
 ```
 
 **Source tagging in the body.** Factual claims in the body sections (Risks, Positions, Open Items, Key Terms) follow this convention:

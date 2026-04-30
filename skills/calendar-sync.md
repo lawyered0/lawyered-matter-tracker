@@ -14,8 +14,8 @@ The calendar is a projection of the tracker. Tracker is the source of truth; cal
 ## Configuration
 
 ```
-KEY_DATES_CALENDAR_ID = "<your-key-dates-calendar-id>@group.calendar.google.com"  # see README for how to find this
-TIMEZONE = "<your-iana-timezone>"  # e.g. America/New_York
+KEY_DATES_CALENDAR_ID = "<your-key-dates-calendar-id>@group.calendar.google.com"
+TIMEZONE = "America/New_York"
 ```
 
 If the user ever re-creates the calendar, swap the id here.
@@ -60,15 +60,15 @@ Every event uses the same structure.
 ```
 
 - `{file#}` is column A of the tracker row (e.g., `2026-070`).
-- `{client_short}` is a 1–3 word slug from column B — last name if individual (e.g., "Smith"), entity short name if corporate (e.g., "Acme Corp"), or the principal's last name in brackets for `Entity (Principal)` rows.
+- `{client_short}` is a 1–3 word slug from column B — last name if individual (e.g., "Chen"), entity short name if corporate (e.g., "Maple Corp"), or the principal's last name in brackets for `Entity (Principal)` rows.
 - `{LABEL}` is the category label from the table above (`Court`, `LIMITATION`, `Follow-up`, `3P Follow-up`).
 - `{short_description}` is ≤ 60 chars, plain language. No legalese.
 
 Examples:
-- `[2026-070 | Smith] Court — Defence deadline (<court case ref>)`
-- `[2026-070 | Smith] LIMITATION — 2-yr limitations expiry`
-- `[2026-070 | Smith] Follow-up — Call Small Claims trial coordinator`
-- `[2026-070 | Smith] 3P Follow-up — Ping the defence lawyer re defence`
+- `[2026-070 | Chen] Court — Defence deadline (Building Corp 1234)`
+- `[2026-070 | Chen] LIMITATION — 2-yr Limitations Act expiry`
+- `[2026-070 | Chen] Follow-up — Call Small Claims trial coordinator`
+- `[2026-070 | Chen] 3P Follow-up — Ping opposing counsel re defence`
 
 ### Time
 
@@ -88,7 +88,7 @@ Deadline: {YYYY-MM-DD}
 
 {full deadline description — one paragraph, no line breaks needed}
 
-Source: {e.g., "March 12 endorsement", "the applicable procedural rule — 30 days before trial", "limitations statute, s.4", "Tracker Next Action"}
+Source: {e.g., "March 12 endorsement", "Rule X — 30 days before trial", "the applicable limitations statute", "Tracker Next Action"}
 Matter folder: {column T value or "not set"}
 
 Last synced: {ISO timestamp}
@@ -165,7 +165,7 @@ After saving, call `cancel_all_for_matter(file_number)`. Confirm: "Cancelled N e
 
 When the inline tracker write changes Next Action (column I) to a new dated value, call `upsert_deadline(..., category="FUP", ...)`.
 
-When the work surfaces a third-party prompt (e.g. "follow up with Jane Doe on April 22 if no response"), call `upsert_deadline(..., category="TFUP", slug=<derived from description>, ...)`. The caller is responsible for deciding that a TFUP event is warranted — not every mention of a person merits a calendar nudge. Good signal: there is a specific date and a specific action. Bad signal: "should probably check in with her sometime."
+When the work surfaces a third-party prompt (e.g. "follow up with the adjuster on April 22 if no response"), call `upsert_deadline(..., category="TFUP", slug=<derived from description>, ...)`. The caller is responsible for deciding that a TFUP event is warranted — not every mention of a person merits a calendar nudge. Good signal: there is a specific date and a specific action. Bad signal: "should probably check in with her sometime."
 
 When the user resolves an item, call `cancel_deadline(file#, category, slug)`.
 
@@ -173,14 +173,14 @@ When the user resolves an item, call `cancel_deadline(file#, category, slug)`.
 
 - **Never push a deadline in the past.** Skip any entry where date ≤ today.
 - **One LIM event per file.** If the limitation deadline changes, `upsert_deadline` updates in place.
-- **One FUP event per file.** Column I is a single next-action field; the calendar mirrors that. If the user changes Next Action from "Call coordinator" to "Serve the required court form", the old FUP event is updated in place.
+- **One FUP event per file.** Column I is a single next-action field; the calendar mirrors that. If the user changes Next Action from "Call coordinator" to "Serve required court form", the old FUP event is updated in place.
 - **Multiple COURT events per file.** Each entry in column S JSON gets its own event, slugged by description.
 - **TFUP events are independent of reconcile.** They only get added/cancelled via explicit calls. This prevents a tracker update from wiping ad-hoc prompts that aren't in any tracker column.
 - **Closed matters have zero events.** Close always cancels everything.
 
 ## Failure Handling
 
-- If any Calendar MCP call errors, log the error to the conversation and continue. Do not block the tracker write. Example: "Calendar sync failed for 2026-070 Smith: rate limited. The tracker is updated; run 'resync calendar' later."
+- If any Calendar MCP call errors, log the error to the conversation and continue. Do not block the tracker write. Example: "Calendar sync failed for 2026-070 Chen: rate limited. The tracker is updated; run 'resync calendar' later."
 - If the caller passes a malformed date (not `YYYY-MM-DD`), skip that entry and flag it to the user.
 - If the caller is missing required fields (file#, category, date, short_description), ask the caller to retry — do not guess.
 

@@ -6,7 +6,10 @@ This project is a legal matter tracking system backed by an Excel spreadsheet (`
 
 - **Tracker spreadsheet**: `matter-tracker.xlsx` in this directory (the CWD)
 - **Client folders**: sibling directories of this file, one per matter (e.g., `./Smith v Jones/`)
-- **Per-matter briefs**: `_matter-brief.md` inside each client folder (created/updated by the `work-on-matter` skill)
+- **Per-matter files**: inside each client folder (created/updated by the `work-on-matter` skill):
+  - `_matter-brief.md` — current-state snapshot (rewritten as facts change)
+  - `_matter-decisions.md` — append-only strategic decisions log with reasoning
+  - `_matter-comms.md` — append-only client communication preferences
 
 ## Available Skills
 
@@ -14,7 +17,7 @@ This project is a legal matter tracking system backed by an Excel spreadsheet (`
 |-------|---------|
 | `daily-triage` | Scan Gmail for new emails, match to open matters, surface urgent items, present a prioritised triage summary |
 | `matter-tracker` | Open, update, and close matters — pulls from Gmail + client folders to build timelines, runs conflict checks, maintains the spreadsheet |
-| `work-on-matter` | Load context for an existing matter at session start, do substantive work with source-first drafting and privilege screening, and keep the tracker current inline |
+| `work-on-matter` | Load context for an existing matter at session start with a mandatory email refresh, do substantive work with source-first drafting and privilege screening, save to three per-matter files (brief, decisions log, comms), and keep the tracker current inline |
 | `calendar-sync` *(helper)* | Push, update, and cancel deadline events on a dedicated "Key Dates" Google Calendar. Invoked internally by the other skills |
 | `overdue-triage` | Periodic sweep of all open matters to reconcile stale / expired deadlines against reality |
 
