@@ -250,7 +250,7 @@ LIMITATION EXPIRED (HIGHEST PRIORITY):
     Limitation expired: 2026-04-05 (14 days ago)
     Last activity: 2026-03-01 (49 days ago)
     Statute: general_statute
-    > Suggested action: URGENT. Confirm whether claim was filed. If not, assess malpractice exposure and notify insurer if applicable. Do NOT file out of time without a s. 5(2) limitations statute analysis.
+    > Suggested action: URGENT. Confirm whether claim was filed. If not, assess malpractice exposure and notify insurer if applicable. Do NOT file out of time without a limitations statute analysis.
 
 COURT DEADLINES PAST DATE:
   * File #2026-019: Smith, J.

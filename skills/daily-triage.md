@@ -30,7 +30,7 @@ Scan Gmail for recent emails, match them against open matters in the tracker, su
    - Client name from column B (both the entity name and the individual name in brackets)
    - Opposing party from column H
    - Other parties from column U (split on commas)
-   - Strip parenthetical role descriptions before matching (e.g., "Sam Torres (co-plaintiff)" → match on "Sam Torres")
+   - Strip parenthetical role descriptions before matching (e.g., "David Park (co-plaintiff)" → match on "David Park")
 4. Also read **"Closed Matters"** for the name index — recent closures may still have incoming email. But only include matters closed within the last 30 days.
 
 ### Step 2 — Scan Gmail
@@ -55,7 +55,7 @@ For each email, attempt to match it to an open matter:
 3. **Match by keywords**: Check if the subject line contains matter-specific keywords from the Matter Description (column C) — e.g., a property address, a company name, a claim number.
 4. **Match by reply chain**: If an email is a reply to a thread that matches a matter, the whole thread belongs to that matter.
 
-Matching should be **case-insensitive** and support **partial matches** (last name matches are sufficient — "Nguyen" matches "Noor Nguyen" in column B).
+Matching should be **case-insensitive** and support **partial matches** (last name matches are sufficient — "Khan" matches "Noor Khan" in column B).
 
 Categorize each email as:
 - **Matched** — clearly belongs to an open matter
@@ -67,7 +67,7 @@ Categorize each email as:
 For each matched email, assign a priority:
 
 **URGENT** (surface at top, with warning):
-- Email from a court address (`@court.example.gov`, `@superior-court.example.gov`, `@tribunal.example.gov`, `@rights-tribunal.example.gov`, any `.gov.example` domain, or any email with "court" or "tribunal" in the domain)
+- Email from a court address (`@ontario.ca`, `@scj-csj.ca`, `@osjct.ca`, `@hrto.gov.on.ca`, any `.gc.ca` domain, or any email with "court" or "tribunal" in the domain)
 - Email referencing a hearing date, trial date, or court appearance
 - Email containing the words "order", "endorsement", "judgment", or "ruling"
 - Email with a deadline or due date within 7 days
@@ -100,7 +100,7 @@ After auto-filling, note what was added in the triage output (see Step 8 format)
 
 These fields require judgment. Present them in the TRACKER GAPS section of the triage output for the lawyer to approve:
 
-- **Opposing Party (column H)**: If blank and the email thread identifies an opposing party by name (in a demand letter header, court filing, or "on behalf of [name]" language), suggest the value. Do NOT auto-fill — Opposing Party feeds the conflict check, and a misidentified opposing party propagates into a structural error in the CRM. Surface the suggestion with one line of evidence (e.g., "Suggested opposing party: Apex Industries Inc. — from Gray demand letter Mar 14 2026").
+- **Opposing Party (column H)**: If blank and the email thread identifies an opposing party by name (in a demand letter header, court filing, or "on behalf of [name]" language), suggest the value. Do NOT auto-fill — Opposing Party feeds the conflict check, and a misidentified opposing party propagates into a structural error in the CRM. Surface the suggestion with one line of evidence (e.g., "Suggested opposing party: Apex Industries Inc. — from opposing demand letter Mar 14 2026").
 - **Matter Description (column C)**: If the current description is vague or generic (e.g., just "Dispute" or "Legal matter") and the email thread reveals specifics (property address, claim type, transaction details), suggest an updated description.
 - **Next Action (column I)**: If blank and the email thread implies an obvious next step (e.g., "please review and sign" → next action: "Review and sign documents"), suggest it.
 - **Limitation Deadline (column R)**: If blank and the email thread references a limitation period or incident date from which one can be calculated, flag it with the suggested date and reasoning.
@@ -111,8 +111,8 @@ Use openpyxl to write auto-fill values directly to the tracker file. Load with `
 
 Keep a running list of all changes made for the triage summary. Format:
 ```
-Auto-filled: 2026-012 | Nguyen — added client email (client.nguyen@example.com)
-Auto-filled: 2026-031 | Maple Corp — added other party (witness: Linda Gray)
+Auto-filled: 2026-012 | Khan — added client email (client@example.com)
+Auto-filled: 2026-031 | Acme — added other party (witness: Susan Park)
 ```
 
 Opposing Party (column H) is NOT auto-filled. When a suggested opposing party is detected, include it in the TRACKER GAPS section of the triage output for the lawyer to approve — do not write to the tracker until confirmed.
@@ -161,7 +161,7 @@ Emails from potential clients who have made contact but where there is no indica
 
 Signals:
 - First-contact email asking about services or describing a problem, but the lawyer hasn't substantively responded yet
-- Referral platform notification (Referral platform, etc.) — lead only
+- Referral platform notification (Lawyer.com, LawTap, etc.) — lead only
 - Website contact form submission
 - Someone asking "do you handle [X]?" or requesting a consultation
 - No fee discussion, no retainer, no documents exchanged
@@ -182,8 +182,8 @@ Daily Triage — [date]
 URGENT
 ========================================
 [If any urgent items exist:]
-- [COURT] 2026-012 | Nguyen — Email from Superior Court re: trial scheduling (received 9:41 AM) — OPEN AND READ
-- [DEADLINE] 2026-031 | Maple Corp — 7-day cure period expires tomorrow (2026-03-21)
+- [COURT] 2026-012 | Khan — Email from Ontario SCJ re: trial scheduling (received 9:41 AM) — OPEN AND READ
+- [DEADLINE] 2026-031 | Acme — 7-day cure period expires tomorrow (2026-03-21)
 
 [If none:] Nothing urgent.
 
@@ -192,15 +192,15 @@ NEW ACTIVITY ON OPEN MATTERS
 ========================================
 [Grouped by matter, showing matched emails:]
 
-2026-012 | Nguyen — Damage deposit claim
+2026-012 | Khan — Damage deposit claim
   - 2 new emails:
-    • From: opposing counsel (jane.park@lawfirm.example.com) — "Re: Settlement proposal" (10:15 AM)
+    • From: opposing counsel (jane.smith@lawfirm.ca) — "Re: Settlement proposal" (10:15 AM)
     • From: court clerk — "Notice of Trial Date" (9:41 AM)
   - Suggested action: Read court email; respond to settlement proposal
 
-2026-031 | Maple Corp — Corporate purchase
+2026-031 | Acme Corp — Corporate purchase
   - 1 new email:
-    • From: client (alex@maplecorp.example.com) — "Signed docs attached" (2:30 PM) [2 attachments]
+    • From: client (john@acmecorp.com) — "Signed docs attached" (2:30 PM) [2 attachments]
   - Suggested action: Review signed documents
 
 [If no matters have new email:] No new email activity on open matters.
@@ -209,8 +209,8 @@ NEW ACTIVITY ON OPEN MATTERS
 TRACKER UPDATES (auto-filled)
 ========================================
 [If any fields were auto-filled in Step 5:]
-- 2026-012 | Nguyen — Added client email: client.nguyen@example.com
-- 2026-031 | Maple Corp — Added opposing party: Apex Industries Inc.
+- 2026-012 | Khan — Added client email: client@example.com
+- 2026-031 | Acme — Added opposing party: Apex Industries Inc.
 
 [If none:] No gaps found.
 
@@ -218,8 +218,8 @@ TRACKER UPDATES (auto-filled)
 TRACKER GAPS (needs your call)
 ========================================
 [If any fields need the lawyer's review from Step 5:]
-- 2026-045 | Acme Corp — Description is generic ("Dispute"). Suggest: "Commercial lease termination — 123 Main St, Anytown"
-- 2026-008 | Rivera — Limitation deadline appears to be 2026-09-15 (2-year from incident date 2024-09-15 per email thread). Add it? [y/n]
+- 2026-045 | Delta Co — Description is generic ("Dispute"). Suggest: "Commercial lease termination — 123 Main St, Toronto"
+- 2026-008 | Lee — Limitation deadline appears to be 2026-09-15 (2-year from incident date 2024-09-15 per email thread). Add it? [y/n]
 
 [If none:] No gaps requiring review.
 
@@ -227,17 +227,17 @@ TRACKER GAPS (needs your call)
 TRACKER ALERTS
 ========================================
 [Limitation deadlines:]
-- 2026-012 | Nguyen — Limitation expires 2026-07-01 (103 days)
-- 2026-044 | Chen — Limitation expires 2026-11-15 (240 days)
+- 2026-012 | Khan — Limitation expires 2026-07-01 (103 days)
+- 2026-044 | Patel — Limitation expires 2026-11-15 (240 days)
 
 [Court deadlines within 30 days:]
-- 2026-019 | Park — Settlement conference 2026-04-02 (13 days)
+- 2026-019 | Smith — Settlement conference 2026-04-02 (13 days)
 
 [Stale matters (no activity > 21 days):]
-- 2026-008 | Rivera — Last activity 2026-02-15 (33 days ago)
+- 2026-008 | Lee — Last activity 2026-02-15 (33 days ago)
 
 [Blank next actions:]
-- 2026-045 | Acme Corp — No next action set
+- 2026-045 | Delta Co — No next action set
 
 ========================================
 INBOX REVIEW
@@ -248,26 +248,26 @@ INBOX REVIEW
 ACTIVE MATTERS — NOT IN TRACKER
 These are matters where you are already acting. They should be tracked.
 
-  [1] Sam / Atlas Gym — Apex Industries dispute
-      sam.b@example.com | 3 emails today | You drafted a response to Gray's demand letter
-      → Ready to open: "new matter Atlas Gym"
+  [1] Alex / Peak Fitness — Apex Industries dispute
+      alex.b@email.com | 3 emails today | You drafted a response to opposing demand letter
+      → Ready to open: "new matter Peak Fitness"
 
-  [2] Alex Chen / MedTech — Physician NDA
-      alex.chen@example.com | Confidentiality agreement finalized and sent today
-      → Ready to open: "new matter Chen"
+  [2] Sam Taylor / MedCo — Physician NDA
+      sam.taylor@email.com | Confidentiality agreement finalized and sent today
+      → Ready to open: "new matter Taylor"
 
 NEW CLIENTS — INTAKE UNDERWAY
 Retention appears confirmed or near-confirmed based on correspondence.
 
-  [3] Dana Park — Commercial lease dispute (Park Medical Professional Corporation)
-      d.park@example.com | Client sent supporting docs, you reviewed and replied
-      → Ready to open: "new matter Park"
+  [3] Sarah Miller — Commercial lease dispute (Miller Medical Professional Corporation)
+      smiller24@email.com | Client sent supporting docs, you reviewed and replied
+      → Ready to open: "new matter Miller"
 
 LEADS — NOT YET RETAINED
 First contact only. Follow up or pass.
 
-  [4] Referral platform referral — Condo building defect (construction/real estate)
-      Via referrals@platform.example.com | Mold and water infiltration issue
+  [4] Lawyer.com referral — Condo building defect (construction/real estate, ON)
+      Via referrals@corp.lawyer.com | Mold and water infiltration issue
       → Outside practice area? Skip or respond to decline.
 
 Plus [N] non-legal emails (newsletters, personal, admin) — skipped.
@@ -283,9 +283,9 @@ After the lawyer responds to the decision list:
 
 1. **For each selected number**: Confirm the client name that will be passed to the matter-tracker skill. The triage does NOT open the matter itself — it tells the lawyer to run the command.
    - Example response: "Got it. Run these to open them:"
-     - `new matter Atlas Gym` (Sam — Apex Industries dispute)
-     - `new matter Chen` (Alex — MedTech NDA)
-     - `new matter Park` (Dana — lease dispute)
+     - `new matter Peak Fitness` (Alex — Apex dispute)
+     - `new matter Taylor` (Sam — MedCo NDA)
+     - `new matter Miller` (Sarah — lease dispute)
 
 2. **For skipped items**: No action needed. They stay in Gmail and will surface again in the next triage if still unmatched.
 
@@ -306,7 +306,7 @@ After the lawyer responds to the decision list:
 9. **Gmail unavailable fallback.** If Gmail MCP tools aren't available, skip the email scan entirely and just run the tracker review (Step 6 alerts only). Tell the user: "Gmail tools not available — showing tracker alerts only." Steps 2-5 and 7 are skipped because they depend on email data.
 10. **Classify, don't just list.** The Inbox Review section must categorize unmatched emails into A/B/C/D. Never present unmatched emails as a flat undifferentiated list. The categories exist to save the lawyer decision-making energy — use the thread content to classify accurately.
 11. **Category D stays quiet.** Non-legal emails (personal, newsletters, marketing, billing confirmations, spam) should never be listed individually. State the count and move on. The lawyer does not need to see "LinkedIn — 3 new notifications" in their legal triage.
-12. **Closed matter matches.** If an unmatched email matches a recently closed matter (within 30 days), flag it explicitly: "Matches closed matter 2026-043 (Jordan Lee, closed Mar 17)." This may indicate follow-up activity on a matter the lawyer thought was done, or a returning client.
+12. **Closed matter matches.** If an unmatched email matches a recently closed matter (within 30 days), flag it explicitly: "Matches closed matter 2026-043 (Kareem Miller, closed Mar 17)." This may indicate follow-up activity on a matter the lawyer thought was done, or a returning client.
 13. **Number the actionable items.** Categories A, B, and C must be presented as a single numbered list (not three separate numbered lists). This lets the lawyer respond with "1, 3, 5" without ambiguity.
 14. **One-line summaries with context.** Each numbered item gets: sender name + email, a one-line description of what the thread is about, and why it's in this category (e.g., "You drafted a response" or "First contact, no reply yet"). This gives the lawyer enough to decide without re-reading the email.
 15. **Auto-fill confidence threshold.** Only auto-fill a field when the match is unambiguous. If the matched email could be from the client OR a third party (e.g., a paralegal forwarding on behalf of a client), don't auto-fill — surface it in TRACKER GAPS instead. When in doubt, ask rather than write.
