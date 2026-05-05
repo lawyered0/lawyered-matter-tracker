@@ -62,7 +62,7 @@ Five Claude skills handle the core workflows:
 |-------|-------------|
 | `daily-triage` | Scans Gmail for new emails, matches them to open matters, surfaces urgent items, auto-fills missing tracker fields, and presents a prioritised triage summary |
 | `matter-tracker` | Opens, updates, and closes matters by pulling from Gmail + client folder files to build timelines. Runs conflict checks, tracks limitation periods, manages calendar sync, and maintains the Excel tracker |
-| `work-on-matter` | Loads context for an existing matter at the start of a work session — reads the tracker row + three per-matter files (brief, decisions log, comms) with a mandatory email refresh so you always pick up from current state. Includes source-first drafting, pre-send sourcing checks, an instruction ledger for substantive drafts, a privilege screen on outbound communications, and prior-matter fact discipline |
+| `work-on-matter` | Loads context for an existing matter at the start of a work session — reads the tracker row plus a current-state brief file (`_matter-brief.md`) from the matter folder, then orients you. As you do substantive work, saves an updated brief and writes inline tracker updates (Last Activity, Timeline, Next Action) so the next session picks up where you left off. Includes source-first drafting, pre-send sourcing checks, an instruction ledger for substantive drafts, and a privilege screen on outbound communications |
 | `calendar-sync` *(helper)* | Pushes limitation dates, court deadlines, and follow-ups to a dedicated "Key Dates" Google Calendar. Invoked internally by `matter-tracker` and `work-on-matter` — not user-facing. Requires a Google Calendar MCP server |
 | `overdue-triage` | The periodic deep sweep. Reviews every open matter for past-date items across Next Action (col I), Limitation Deadline (col R), and Court Deadlines (col S); investigates each, confirms with you one item at a time, and applies approved changes in a single batched write. Meant to run every few weeks |
 
@@ -70,10 +70,10 @@ Five Claude skills handle the core workflows:
 Searches Gmail for recent emails, matches them against open matters by name/email/keyword, classifies urgency (court emails are always urgent), and presents a scannable summary. Auto-fills missing contact info when confident. Categorises unmatched emails into: active matters not yet tracked, new client inquiries, leads, and non-legal.
 
 ### Matter Tracker
-The CRM engine. "New matter Smith" triggers a full Gmail search + folder scan, builds a timeline with a SUMMARY header, runs a conflict check, and adds the matter to the spreadsheet. "Update matter Smith" pulls new activity since the last update. "Close matter Smith" finalises and archives. Always confirms before writing.
+The CRM engine. "New matter Smith" triggers a full Gmail search + folder scan, builds a chronological timeline, runs a conflict check, and adds the matter to the spreadsheet. "Update matter Smith" pulls new activity since the last update and merges it in. "Close matter Smith" finalises and moves the row to the Closed Matters sheet. Always confirms before writing.
 
 ### Work on Matter
-Fast context loading with a mandatory email refresh. "Let's work on Smith" reads the tracker row and three per-matter files from the matter folder: a current-state brief (`_matter-brief.md`), a strategic decisions log (`_matter-decisions.md`), and a client communications/preferences file (`_matter-comms.md`). On every load, the skill pulls the past 7 days from Gmail and merges any material findings into the brief before orienting — no more stale context. As you do substantive work (review documents, draft letters, give advice), the skill saves to whichever file the content belongs in and updates the tracker inline so the next session can pick up instantly. Includes source-first drafting guardrails (every dollar figure, section reference, and party name gets confirmed against the source document before it lands in client-facing output), a privilege screen that catches internal reasoning bleeding into outbound comms, and a prior-matter fact discipline that requires three-source verification before categorical statements about past firm involvement.
+"Let's work on Smith" reads the tracker row and the matter brief (`_matter-brief.md`) from the matter folder, then summarises where things stand so you can pick up immediately. As you do substantive work (review documents, draft letters, give advice), the skill saves an updated brief and writes inline tracker updates (Last Activity, Timeline append, Next Action) in the same response — there's no separate "save" step, because sessions can end without warning. Includes source-first drafting guardrails (every dollar figure, section reference, and party name gets confirmed against the source document before it lands in client-facing output), a pre-send sourcing check that surfaces unverified claims before any outbound communication leaves the firm, an instruction ledger that ties every provision in a substantive draft to either a client instruction or a flagged discretionary addition, and a privilege screen that catches internal reasoning bleeding into outbound comms.
 
 ### Calendar Sync *(helper, not user-facing)*
 Projects the tracker onto a dedicated Google Calendar. Court deadlines, limitation dates, follow-ups, and third-party pings each get a colour-coded event with a 14/7/2/0-day reminder schedule. The tracker is the source of truth; the calendar is a read-only projection.
@@ -96,7 +96,7 @@ The tracker uses two sheets ("Open Matters" and "Closed Matters") with these col
 | G | Last Activity | Updated on every interaction |
 | H | Opposing Party | If applicable |
 | I | Next Action / Deadline | Key upcoming step |
-| J | Timeline | Substantive SUMMARY header + chronological log |
+| J | Timeline | Chronological log, one line per event |
 | K | Client ID Verified | Checkmark or Pending |
 | L | Conflict Check Done | Checkmark or Pending |
 | M-O | Client Email/Phone/Address | Contact info |
