@@ -41,13 +41,22 @@ Color coding lets you scan Key Dates at a glance — red is existential, blue is
 
 ## Reminders
 
-**Reminders come from the Key Dates calendar's default notification settings**, not from per-event overrides. The Google Calendar `create_event` MCP does not expose a reminders parameter. This is a deliberate tradeoff.
+Set reminders **per event** via the `create_event` / `update_event` `overrideReminders` parameter. Each reminder is `{"method": "popup", "minutes": N}` (use `popup`; add an `email` reminder on the limitation 0-day too if you want belt-and-suspenders). `overrideReminders` overrides the calendar's default notifications for that event, so each category gets the schedule it actually needs rather than one blanket default.
 
-The user configures Key Dates calendar defaults once in Google Calendar: Settings → Key Dates → Event notifications. The recommended default schedule for all-day events on Key Dates is 14 days / 7 days / 2 days / 0 minutes before. Every event created on Key Dates then inherits those notifications automatically.
+**Per-category reminder schedules** (minutes before the all-day event):
 
-This model applies uniformly across categories — court deadlines, limitations, and follow-ups all get the same reminders. That is mildly over-alerting for low-stakes follow-ups and mildly under-alerting for limitation periods (which ideally would get a 60-day early warning), but it is the cleanest model given the MCP constraint. The important thing is that events land on the calendar at all — the reminder schedule is the user's daily-glance supplement, not the primary defense against missed deadlines. The tracker itself is the defense.
+| Category | Days before | `minutes` values |
+|----------|-------------|------------------|
+| `LIM` (limitation) | 60 / 30 / 14 / 7 / 0 | 86400, 43200, 20160, 10080, 0 |
+| `COURT` | 14 / 7 / 2 / 0 | 20160, 10080, 2880, 0 |
+| `FUP` (follow-up) | 2 / 0 | 2880, 0 |
+| `TFUP` (3P follow-up) | 2 / 0 | 2880, 0 |
 
-If the default reminders on Key Dates ever drift, calendar-sync does not detect or correct that. It assumes the user has the calendar defaults configured.
+Google caps reminders at 5 per event; the limitation schedule uses exactly 5.
+
+Always pass `overrideReminders` on `create_event` and `update_event`. Limitation periods get the long 60-day runway because a missed limitation reminder is the one that ends a claim, and that early warning is the whole reason limitations go on the calendar. The tracker itself remains the primary defense against missed deadlines; these per-event reminders are the calendar-side backstop.
+
+If the connected calendar MCP ever stops accepting `overrideReminders`, fall back to the calendar's default notification settings and tell the user once. The current MCP supports per-event reminders, so use them.
 
 ## Event Format
 
@@ -60,7 +69,7 @@ Every event uses the same structure.
 ```
 
 - `{file#}` is column A of the tracker row (e.g., `2026-070`).
-- `{client_short}` is a 1–3 word slug from column B — last name if individual (e.g., "Davis"), entity short name if corporate (e.g., "Acme Corp"), or the principal's last name in brackets for `Entity (Principal)` rows.
+- `{client_short}` is a 1–3 word slug from column B — last name if individual (e.g., "Davis"), entity short name if corporate (e.g., "Acme Group"), or the principal's last name in brackets for `Entity (Principal)` rows.
 - `{LABEL}` is the category label from the table above (`Court`, `LIMITATION`, `Follow-up`, `3P Follow-up`).
 - `{short_description}` is ≤ 60 chars, plain language. No legalese.
 
@@ -68,11 +77,11 @@ Examples:
 - `[2026-070 | Davis] Court — Defence deadline (TSCC 1654)`
 - `[2026-070 | Davis] LIMITATION — 2-yr Limitations Act expiry`
 - `[2026-070 | Davis] Follow-up — Call Small Claims trial coordinator`
-- `[2026-070 | Davis] 3P Follow-up — Ping Jane Doe re defence`
+- `[2026-070 | Davis] 3P Follow-up — Ping Nina Bauer re defence`
 
 ### Time
 
-All events are **all-day** events on the deadline date. Simple, reliable, and avoids timezone drift. Reminders fire based on Key Dates calendar defaults (see "Reminders" section above) — nothing is set per event.
+All events are **all-day** events on the deadline date. Simple, reliable, and avoids timezone drift. Reminders are set per event via `overrideReminders` (see the Reminders section above).
 
 ### Description (event body)
 
@@ -112,9 +121,9 @@ This gives each event a stable, human-readable identity that survives edits to t
 3. Find any event whose description first line equals `SYNC-KEY: {sync_key}`.
 4. If found:
    - If the existing event's date matches `date` and title/body match current values, return unchanged.
-   - Otherwise, `update_event` with the new title, body, date, and colorId for this category.
+   - Otherwise, `update_event` with the new title, body, date, colorId, and `overrideReminders` for this category.
 5. If not found:
-   - `create_event` with the title, body, date, and colorId for this category. Do not pass a reminders parameter — the event inherits Key Dates calendar defaults.
+   - `create_event` with the title, body, date, colorId, and `overrideReminders` for this category (see the Reminders table). Pass `overrideReminders` as a list of `{"method": "popup", "minutes": N}` objects.
 6. Return the event id.
 
 ### `cancel_deadline(file_number, category, slug=None)`
@@ -165,7 +174,7 @@ After saving, call `cancel_all_for_matter(file_number)`. Confirm: "Cancelled N e
 
 When the inline tracker write changes Next Action (column I) to a new dated value, call `upsert_deadline(..., category="FUP", ...)`.
 
-When the work surfaces a third-party prompt (e.g. "follow up with Tom Brown on April 22 if no response"), call `upsert_deadline(..., category="TFUP", slug=<derived from description>, ...)`. The caller is responsible for deciding that a TFUP event is warranted — not every mention of a person merits a calendar nudge. Good signal: there is a specific date and a specific action. Bad signal: "should probably check in with her sometime."
+When the work surfaces a third-party prompt (e.g. "follow up with Tom Boyd on April 22 if no response"), call `upsert_deadline(..., category="TFUP", slug=<derived from description>, ...)`. The caller is responsible for deciding that a TFUP event is warranted — not every mention of a person merits a calendar nudge. Good signal: there is a specific date and a specific action. Bad signal: "should probably check in with her sometime."
 
 When the user resolves an item, call `cancel_deadline(file#, category, slug)`.
 

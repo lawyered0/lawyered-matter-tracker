@@ -22,13 +22,13 @@ This is the "once in a while" big triage. Daily email triage belongs to `daily-t
 ## Dependencies
 
 - **Matter tracker spreadsheet**: `matter-tracker.xlsx`, located using the same CWD, parent, grandparent resolution as matter-tracker.
-- **Gmail MCP tools**: `gmail_search_messages`, `gmail_read_thread`, `gmail_read_message`. If unavailable, fall back to folder-scan only and warn the user.
+- **Gmail MCP tools**: `search_threads` (find threads by query) and `get_thread` (read a full thread by ID). There is no message-level search and no single-message read — everything is thread-level. `search_threads` truncates the per-thread message list, so use it to discover thread IDs and read each thread in full with `get_thread`. If unavailable, fall back to folder-scan only and warn the user.
 - **Local file tools**: Glob, Grep, Read for folder scans.
 - **calendar-sync skill**: After the batched tracker write, invoke `calendar-sync.reconcile(row)` for every matter touched, so resolved deadlines disappear from Key Dates.
 
 ## Detection Logic
 
-Mirror `matter_to_dict()` in `app.py`. The three overdue sources are:
+The three overdue sources are:
 
 ### 1. Column I (Next Action / Deadline): past-date Next Action
 
@@ -40,7 +40,7 @@ Parse column I with the regex `^(\d{4}-\d{2}-\d{2})\s*:`. The date MUST be at th
 - Example NOT overdue: `"Settlement conference to be rescheduled (adjourned from 2026-04-09); awaiting new date"` (date is embedded, not leading, so no deadline)
 - Example NOT overdue: `"Awaiting court to schedule assessment hearing (Form 9B filed 2026-01-21)"` (embedded filing date, not a deadline)
 
-**Known inherited bug**: the `app.py` Flask dashboard uses the looser regex and will show the above embedded-date examples as overdue. The tracker data is fine; only the dashboard display is wrong. Consider patching `app.py` to match this skill's stricter regex.
+**Stick to the strict leading-date regex above.** A looser search like `\b(\d{4}-\d{2}-\d{2})\b` (matching a date anywhere in the string) would mis-flag embedded historical dates such as "adjourned from 2026-04-09" as overdue. The leading-date-plus-colon anchor is what prevents those false positives.
 
 ### 2. Column R (Limitation Deadline): past limitation expiry
 
@@ -55,7 +55,7 @@ Parse column S as JSON. For each entry `{"date": "...", "description": "...", "s
 ### Step 1: Load Tracker and Detect
 
 1. Locate and load `matter-tracker.xlsx` (CWD, parent, grandparent, then ask).
-2. Check for lock file `~$matter-tracker.xlsx`. If present, stop and tell the user to close Excel.
+2. Check for lock file `~$matter-tracker.xlsx`. If present, stop and tell the lawyer to close Excel.
 3. Read **"Open Matters"** only (closed matters are archived; don't touch them).
 4. **Data quality pre-scan.** Before building the overdue list, sweep every open row for column-level data problems. Don't fail the scan. Collect warnings and surface them at the top of the final output. Checks:
    - Column G (Last Activity) non-empty but not a valid `YYYY-MM-DD` date (e.g., prose text written into the wrong cell).
@@ -103,7 +103,24 @@ After every batch, offer an implicit bail-out: if the lawyer interrupts, the dec
 
 For each matter in a batch:
 
-1. **Gmail pull**: `gmail_search_messages` for the client name (from column B: strip the parenthetical principal name and search both the entity and the principal). Use `newer_than` based on the earliest overdue date for that matter, minus 7 days for context. Read every thread in full with `gmail_read_thread`. Snippets lie.
+1. **Gmail pull (two-pass when sender addresses are known).** A keyword-only pull will silently miss short replies on old threads ("got it, see you Friday" from opposing counsel) because Gmail matches each message individually and a one-line reply carries no matter-specific text. The lookback for overdue triage is often weeks or months back to the earliest overdue date, which makes this failure mode more likely, not less. Run both passes:
+
+   **Pass A — Keyword pass.** Build the query from these inputs, joined with OR:
+   - Client name from column B (entity AND principal name in brackets, as separate OR'd terms — strip the parenthetical and search both forms).
+   - Opposing party from column H if populated.
+   - Named role-holders from `_matter-brief.md` `## Roles` if the brief exists (opposing principals, opposing counsel, witnesses, experts, agents). Skip the client (covered) and skip generic role labels.
+   - Matter-specific keywords from column C that are unusual enough to be useful (e.g., property address, court file number).
+
+   Use `newer_than` based on the earliest overdue date for that matter, minus 7 days for context.
+
+   **Pass B — From-address pass.** Build the query as `(from:addr1 OR from:addr2 OR ...) newer_than:Xd` (same window as Pass A), using:
+   - Client Email from tracker column M.
+   - Email addresses parsed out of `_matter-brief.md` `## Roles` (opposing counsel, opposing principals, third parties).
+   - Court / tribunal addresses that have appeared on this matter before (look in earlier timeline entries on column J).
+
+   Pass B is **non-negotiable when any addresses are on file** — without it, opposing-counsel one-liners on old hearing threads silently slip through and you miss the evidence that the deadline was met. Pass B may be skipped only when no addresses are anywhere on file (rare for matters old enough to have overdue items). When skipped, note it explicitly in the per-matter evidence bundle so the lawyer knows the coverage limit.
+
+   Union the thread IDs from both passes and dedupe. Read every unique thread in full with `get_thread`. Snippets lie.
 2. **Folder scan** (if column T is populated): `Glob` the matter folder for common legal file types (`**/*.pdf`, `**/*.docx`, `**/*.msg`, `**/*.eml`). Filter to files modified after the earliest overdue date minus 7 days.
 3. **Read** the relevant files. For **scanned PDFs** where text extraction returns empty (common for court endorsements, affidavits of service, filed originals produced by the court or a process server): treat the **filename** and **modification date** as primary evidence of occurrence (e.g., `"ENDORSEMENT RECORD - DJ WALLACH - 27 MAR 2026.pdf"` on disk strongly implies the hearing produced an order). Do not silently skip scanned PDFs. Record their filenames in the evidence bundle so the lawyer sees them in the confirmation step. Defer outcome detail (what the endorsement says, what was decided) to Gmail, the matter brief (`_matter-brief.md`), or the lawyer's memory.
 4. **Read `_matter-brief.md`** if present in the matter folder. The brief is a privileged current-state snapshot. Its "Open Items" and "Last Updated" sections are often decisive evidence of what was pending vs. resolved.
@@ -113,7 +130,7 @@ For each matter in a batch:
      - Court deadline "Serve defendants by 2026-04-10" and folder has "Affidavit of Service - 2026-04-08.pdf". Resolved.
      - Next Action "2026-03-19: 7-day cure period expires" and Gmail shows a settlement agreement signed 2026-03-18. Resolved (mooted by settlement).
      - Overdue limitation and an issued claim is in the folder (file starts with court file number or contains "Issued" / "Form 7A"). Likely resolved (claim was filed); flag for "claim filed" confirmation.
-   - **Unresolved evidence**: no activity, no reference, or explicit signs the task wasn't done. Example: "Serve the required court form on defendants by 2026-04-10" with no affidavit of service, no email about service, and no acknowledgment from opposing counsel. Unresolved.
+   - **Unresolved evidence**: no activity, no reference, or explicit signs the task wasn't done. Example: "Serve Form 1B on defendants by 2026-04-10" with no affidavit of service, no email about service, and no acknowledgment from opposing counsel. Unresolved.
    - **Ambiguous**: unclear. Default to treating as unresolved (safer) and flag it for the lawyer to decide.
 
 **Scaled limitation pattern.** If the scan produced ≥5 overdue limitations AND the investigation evidence for those matters shows a court file number or issued claim in Gmail/folder (meaning the claim was clearly filed), present them together in the confirmation step as a bulk batch: "Found N limitation deadlines that appear resolved (claim filed in all cases based on court file numbers in Gmail). Review and bulk-approve?" Still gate on the lawyer confirmation. Never auto-clear a limitation. But one confirmation for N items beats N confirmations.
@@ -156,7 +173,7 @@ Track each item's outcome in an in-memory structure:
 ```python
 decisions = [
     {"file_no": "2026-012", "type": "court_deadline", "index": 0, "action": "resolve",
-     "timeline_entry": "Served the required court form on defendants", "date": "2026-04-08"},
+     "timeline_entry": "Served Form 1B on defendants", "date": "2026-04-08"},
     {"file_no": "2026-012", "type": "next_action", "action": "resolve",
      "new_next_action": "2026-05-15: Motion for summary judgment",
      "timeline_entry": "Settlement conference held; no settlement reached"},
@@ -175,19 +192,19 @@ Before making any write, show the lawyer exactly what's about to change:
 Ready to batch-apply changes. Here's what I'll write:
 
 RESOLVED (N items):
-  * File #2026-012 (Chen): remove court deadline "Serve the required court form" (2026-04-10)
-    Timeline += "2026-04-08: Served the required court form on defendants"
-  * File #2026-012 (Chen): update Next Action to "2026-05-15: Motion for summary judgment"
+  * File #2026-012 (Patel): remove court deadline "Serve Form 1B" (2026-04-10)
+    Timeline += "2026-04-08: Served Form 1B on defendants"
+  * File #2026-012 (Patel): update Next Action to "2026-05-15: Motion for summary judgment"
     Timeline += "2026-03-27: Settlement conference held; no settlement reached"
-  * File #2026-015 (Acme Corp): remove court deadline "Amend claim" (2026-03-25)
+  * File #2026-015 (Acme Group): remove court deadline "Amend claim" (2026-03-25)
     Timeline += "2026-03-20: Amended claim served per endorsement"
   ...
 
 SKIPPED (X items):
-  * File #2026-019 (Smith): Next Action "2026-03-15: Send draft SPA", skipped for manual review
+  * File #2026-019 (Lee): Next Action "2026-03-15: Send draft SPA", skipped for manual review
 
 UNRESOLVED (Y items), will go on red-flag list, no tracker writes:
-  * File #2026-008 (Chen): Limitation expired 2026-04-05 (14 days ago), HIGH RISK
+  * File #2026-008 (Effa): Limitation expired 2026-04-05 (14 days ago), HIGH RISK
   * File #2026-021 (Nguyen): Next Action "2026-03-10: File defence", 40 days overdue
   ...
 
@@ -245,18 +262,18 @@ RED-FLAG LIST: Items still pending after triage
 ===============================================================
 
 LIMITATION EXPIRED (HIGHEST PRIORITY):
-  * File #2026-008: Chen, M.
+  * File #2026-008: Effa, M.
     Matter: Constructive dismissal claim
     Limitation expired: 2026-04-05 (14 days ago)
     Last activity: 2026-03-01 (49 days ago)
-    Statute: general_statute
-    > Suggested action: URGENT. Confirm whether claim was filed. If not, assess malpractice exposure and notify insurer if applicable. Do NOT file out of time without a limitations statute analysis.
+    Statute: limitations_act_basic
+    > Suggested action: URGENT. Confirm whether claim was filed. If not, assess malpractice exposure and notify insurer if applicable. Do NOT file out of time without a s. 5(2) Limitations Act analysis.
 
 COURT DEADLINES PAST DATE:
-  * File #2026-019: Smith, J.
-    Deadline: "Serve the required court form on defendants", was 2026-04-10 (9 days ago)
+  * File #2026-019: Lee, N.
+    Deadline: "Serve Form 1B on defendants", was 2026-04-10 (9 days ago)
     Last activity: 2026-03-15 (35 days ago)
-    > Suggested action: Confirm service status. If not served, serve immediately and disclose late service to the court. If served, run "update matter Smith" to log the service date.
+    > Suggested action: Confirm service status. If not served, serve immediately and disclose late service to the court. If served, run "update matter Lee" to log the service date.
 
 NEXT ACTION PAST DATE:
   * File #2026-021: Nguyen, T.
@@ -274,7 +291,7 @@ STALE BUT NOT OVERDUE:
 **Suggested action writing rules:**
 - Be specific. "Follow up" is not a suggestion. Name who to contact, what to check, and what the next procedural step is.
 - For limitation expiries, always flag malpractice exposure analysis. Never minimize.
-- For service deadlines, always mention the the applicable relief-from-consequences rule relief-from-consequences option if the deadline was missed.
+- For service deadlines, always mention the rule 3.02 relief-from-consequences option if the deadline was missed.
 - For court deadlines tied to endorsements, suggest checking the order text to see if the court attached consequences (e.g., "failure to serve results in dismissal").
 - Match the lawyer's preference: no em dashes, no sugar-coating.
 
@@ -303,10 +320,10 @@ A concise reference for writing the red-flag list. Use these as templates. Custo
 
 | Scenario | Template suggested action |
 |----------|--------------------------|
-| Limitation expired, no claim filed | "URGENT: Limitation expired [N] days ago. Confirm non-filing. If confirmed, conduct a limitations-statute discovery analysis for any late-filing argument. Notify insurer if exposure exists. Consider the discoverability defence in the alternative." |
-| Court deadline missed (service) | "Confirm service status. If not served, serve immediately. Assess whether the applicable relief-from-consequences rule relief from consequences is needed. Notify opposing counsel of late service and confirm no prejudice." |
+| Limitation expired, no claim filed | "URGENT: Limitation expired [N] days ago. Confirm non-filing. If confirmed, conduct s. 5 Limitations Act discovery analysis for any late-filing argument. Notify insurer if exposure exists. Consider s. 21 discoverability defence in the alternative." |
+| Court deadline missed (service) | "Confirm service status. If not served, serve immediately. Assess whether rule 3.02 relief from consequences is needed. Notify opposing counsel of late service and confirm no prejudice." |
 | Court deadline missed (filing) | "Confirm filing status. If not filed, file now with an explanation letter to the court. Check for any default proceedings initiated by opposing counsel." |
-| Court deadline missed (endorsement compliance) | "Check the endorsement text for automatic consequences. If the endorsement attached consequences (e.g., dismissal, striking of claim), assess the applicable civil procedure rule motion to set aside. Notify client immediately." |
+| Court deadline missed (endorsement compliance) | "Check the endorsement text for automatic consequences. If the endorsement attached consequences (e.g., dismissal, striking of claim), assess rule 37.14 motion to set aside. Notify client immediately." |
 | Next Action: settlement conference passed | "Log conference outcome (result, positions taken, next steps). If ordered to a further step, add to court deadlines. If settled, proceed to close." |
 | Next Action: cure period expired | "Confirm whether breach was cured. If cured, note and proceed. If not, file for judgment per the agreement. Client decision needed." |
 | Next Action: client instructions overdue | "Follow up with client directly (phone, not email). If no response after [7 days], send formal written follow-up. If still no response, consider terminating the retainer per the engagement letter." |
