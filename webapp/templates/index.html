@@ -386,7 +386,7 @@ function renderSidebar(){
   if(filtered.length===0&&(currentSearch||currentFilter!=='all')){
     document.getElementById('matterList').innerHTML=`<div class="empty-state"><img src="/static/img/empty-state.jpg" alt="No results"><p>No matters found</p></div>`;
   }else{
-    document.getElementById('matterList').innerHTML=filtered.map(m=>`<div class="matter-item ${m.status!=='Open'?'closed-matter':''} ${activeMatter?.file_no===m.file_no?'active':''}" onclick="showMatter('${escAttr(m.file_no)}')"><div class="file-no">${esc(m.file_no)}</div><div class="client-name">${esc(m.client)}</div><span class="matter-type-tag tag-${m.matter_type}">${m.matter_type}</span></div>`).join('');
+    document.getElementById('matterList').innerHTML=filtered.map(m=>`<div class="matter-item ${m.status!=='Open'?'closed-matter':''} ${activeMatter?.file_no===m.file_no?'active':''}" onclick="showMatter('${escAttr(m.file_no)}')"><div class="file-no">${esc(m.file_no)}</div><div class="client-name">${esc(m.client)}</div><span class="matter-type-tag tag-${escAttr(m.matter_type)}">${esc(m.matter_type)}</span></div>`).join('');
   }
   document.getElementById('matterCount').textContent=filtered.length;
 }
@@ -409,7 +409,7 @@ function renderDashboard(){
   const sorted=[...open].sort((a,b)=>{const da=daysBetween(a.earliest_deadline),db=daysBetween(b.earliest_deadline);if(da===null&&db===null)return 0;if(da===null)return 1;if(db===null)return-1;return da-db;});
   document.getElementById('deadlineBody').innerHTML=sorted.map(m=>{
     const days=daysBetween(m.earliest_deadline);
-    return`<tr onclick="showMatter('${escAttr(m.file_no)}')"><td><span class="urgency-dot urgency-${urgencyClass(days)}" title="${urgencyLabel(days)}"></span></td><td class="file-no">${esc(m.file_no)}</td><td class="client">${esc(m.client)}</td><td><span class="tag tag-${m.matter_type}">${m.matter_type}</span></td><td class="next-action">${esc(m.next_action)}</td><td style="color:var(--text-3);font-size:12px">${fmtDate(m.last_activity)}</td></tr>`;
+    return`<tr onclick="showMatter('${escAttr(m.file_no)}')"><td><span class="urgency-dot urgency-${urgencyClass(days)}" title="${urgencyLabel(days)}"></span></td><td class="file-no">${esc(m.file_no)}</td><td class="client">${esc(m.client)}</td><td><span class="tag tag-${escAttr(m.matter_type)}">${esc(m.matter_type)}</span></td><td class="next-action">${esc(m.next_action)}</td><td style="color:var(--text-3);font-size:12px">${fmtDate(m.last_activity)}</td></tr>`;
   }).join('');
 }
 
@@ -441,7 +441,7 @@ function drilldown(type){
   items.sort((a,b)=>{if(a.days===null&&b.days===null)return 0;if(a.days===null)return 1;if(b.days===null)return-1;return a.days-b.days;});
   document.getElementById('drilldownTitle').textContent=title+' ('+items.length+')';
   document.getElementById('drilldownBody').innerHTML=items.map(({m,days,detail})=>
-    `<tr onclick="showMatter('${escAttr(m.file_no)}')"><td><span class="urgency-dot urgency-${urgencyClass(days)}"></span></td><td class="file-no">${esc(m.file_no)}</td><td class="client">${esc(m.client)}</td><td><span class="tag tag-${m.matter_type}">${m.matter_type}</span></td><td class="next-action">${esc(detail)}</td><td style="color:${days<0?'var(--red)':days<=7?'var(--orange)':'var(--text-3)'};font-size:12px;font-weight:600">${urgencyLabel(days)}</td></tr>`
+    `<tr onclick="showMatter('${escAttr(m.file_no)}')"><td><span class="urgency-dot urgency-${urgencyClass(days)}"></span></td><td class="file-no">${esc(m.file_no)}</td><td class="client">${esc(m.client)}</td><td><span class="tag tag-${escAttr(m.matter_type)}">${esc(m.matter_type)}</span></td><td class="next-action">${esc(detail)}</td><td style="color:${days<0?'var(--red)':days<=7?'var(--orange)':'var(--text-3)'};font-size:12px;font-weight:600">${urgencyLabel(days)}</td></tr>`
   ).join('')||'<tr><td colspan="6" style="color:var(--text-3);text-align:center;padding:20px">None</td></tr>';
   document.getElementById('drilldownSection').style.display='block';
   document.getElementById('drilldownSection').scrollIntoView({behavior:'smooth',block:'start'});
@@ -458,7 +458,9 @@ function showTypeDropdown(event,fileNo){
   event.stopPropagation();
   const existing=document.querySelector('.type-dropdown');if(existing)existing.remove();
   const tag=event.currentTarget;const rect=tag.getBoundingClientRect();
-  const types=['SCC','Employment','Demand/Recovery','Corporate','Transactional','Other','Auto-detect'];
+  const standard=['SCC','Employment','Demand/Recovery','Corporate','Transactional','Other'];
+  const custom=[...new Set(matters.map(m=>m.matter_type).filter(t=>t&&!standard.includes(t)))].sort();
+  const types=[...standard,...custom,'Auto-detect'];
   const dd=document.createElement('div');dd.className='type-dropdown';
   dd.style.top=(rect.bottom+4)+'px';dd.style.left=rect.left+'px';dd.style.position='fixed';
   types.forEach(t=>{
@@ -530,7 +532,7 @@ function showMatter(fileNo){
   document.getElementById('detailHeader').innerHTML=`
     <div style="display:flex;justify-content:space-between;align-items:flex-start">
       <div>
-        <div class="file-no">${esc(m.file_no)} <span class="tag tag-${m.matter_type}" style="cursor:pointer;position:relative" onclick="showTypeDropdown(event,'${escAttr(m.file_no)}')" title="Click to change type">${m.matter_type} &#9662;</span> <span style="color:${m.status==='Open'?'var(--green)':'var(--text-3)'}">${m.status}</span></div>
+        <div class="file-no">${esc(m.file_no)} <span class="tag tag-${escAttr(m.matter_type)}" style="cursor:pointer;position:relative" onclick="showTypeDropdown(event,'${escAttr(m.file_no)}')" title="Click to change type">${esc(m.matter_type)} &#9662;</span> <span style="color:${m.status==='Open'?'var(--green)':'var(--text-3)'}">${m.status}</span></div>
         <h2>${esc(m.client)}</h2>
         <div class="description">${esc(m.description)}</div>
       </div>
@@ -791,7 +793,7 @@ async function runConflictCheck(){
   else{
     html+=`<div style="color:var(--orange);font-size:13px;font-weight:600;margin-bottom:10px">${result.hits.length} potential conflict${result.hits.length>1?'s':''}</div>`;
     html+=result.hits.map(h=>`<div class="conflict-hit" onclick="showMatter('${escAttr(h.file_no)}')">
-      <div style="display:flex;justify-content:space-between;align-items:center"><div><span class="hit-file">${esc(h.file_no)}</span> \u00B7 <span style="color:${h.status==='Open'?'var(--green)':'var(--text-3)'}">${h.status}</span></div><span class="tag tag-${h.matter_type}">${h.matter_type}</span></div>
+      <div style="display:flex;justify-content:space-between;align-items:center"><div><span class="hit-file">${esc(h.file_no)}</span> \u00B7 <span style="color:${h.status==='Open'?'var(--green)':'var(--text-3)'}">${h.status}</span></div><span class="tag tag-${escAttr(h.matter_type)}">${esc(h.matter_type)}</span></div>
       <div class="hit-client">${esc(h.client)}</div>
       ${h.opposing?`<div style="font-size:12px;color:var(--text-3)">vs. ${esc(h.opposing)}</div>`:''}
       ${h.other_parties?`<div style="font-size:12px;color:var(--text-3)">Related: ${esc(h.other_parties)}</div>`:''}
