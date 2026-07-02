@@ -9,7 +9,7 @@ description: "Use this skill for a big periodic sweep of the matter tracker to c
 
 The matter tracker accumulates stale deadlines. When a settlement conference happens, a court deadline passes, or a limitation is resolved by filing, the tracker doesn't auto-update. It relies on the user running `update matter [name]` on that specific file. Over time, columns I, R, and S fill up with past dates that no longer reflect reality.
 
-This skill does one thing well: **sweep every open matter for overdue items, figure out which ones were already dealt with, and clean them up in a single batched write.** Items that look unresolved get surfaced as a red-flag list with suggested next actions.
+This skill does one thing well: **sweep every open matter for overdue items, figure out which ones were already dealt with, and clean them up in one confirmed batch of guarded writes.** Items that look unresolved get surfaced as a red-flag list with suggested next actions.
 
 This is the "once in a while" big triage. Daily email triage belongs to `daily-triage`.
 
@@ -25,6 +25,16 @@ This is the "once in a while" big triage. Daily email triage belongs to `daily-t
 - **Gmail MCP tools**: `search_threads` (find threads by query) and `get_thread` (read a full thread by ID). There is no message-level search and no single-message read — everything is thread-level. `search_threads` truncates the per-thread message list, so use it to discover thread IDs and read each thread in full with `get_thread`. If unavailable, fall back to folder-scan only and warn the user.
 - **Local file tools**: Glob, Grep, Read for folder scans.
 - **calendar-sync skill**: After the batched tracker write, invoke `calendar-sync.reconcile(row)` for every matter touched, so resolved deadlines disappear from Key Dates.
+
+## Tracker Writes
+
+Tracker writes go through tracker_write.py — never ad-hoc openpyxl (openpyxl is fine for reading):
+
+```
+python3 scripts/tracker_write.py <subcommand> --tracker "<tracker path>" ...
+```
+
+Subcommands this skill uses: `update --file-no N --set "COLUMN=value" [--set ...]` · `timeline --file-no N --date YYYY-MM-DD --text "..."` (appends and bumps Last Activity per the max rule) · `court-deadline remove --file-no N --index I` · `court-deadline resolve --file-no N --index I --date YYYY-MM-DD`. Every call does the Excel-lock check, its own timestamped backup into `backups/`, an atomic save, and runs validate_tracker.py automatically. **Non-zero exit = not saved** — report the stderr to the lawyer; never fall back to direct openpyxl writes.
 
 ## Detection Logic
 
@@ -50,7 +60,7 @@ If column R is a date before today, the limitation has expired. This is the high
 
 Parse column S as JSON. For each entry `{"date": "...", "description": "...", "source": "..."}`, if `date` is before today, that deadline is overdue. Entries can be independently resolved. Remove individual expired entries, not the whole array.
 
-**Anchored-relative entries.** Entries with an `anchor` field and no `date` (the representation for "30 days before trial"-type deadlines; legacy `"TBD-*"` date strings get the same treatment) have no concrete date yet. Surface them EVERY sweep as "unresolved relative deadline: anchor not yet set". When the lawyer provides the anchor date, compute the concrete date per your jurisdiction's deadline rules (roll weekends and court holidays as required), replace the entry with a dated one, and push to calendar via calendar-sync.
+**Anchored-relative entries.** Entries with an `anchor` field and no `date` (the representation for "30 days before trial"-type deadlines; legacy `"TBD-*"` date strings get the same treatment) have no concrete date yet. Surface them EVERY sweep as "unresolved relative deadline: anchor not yet set". When the lawyer provides the anchor date, compute the concrete date per your jurisdiction's deadline rules (roll weekends and court holidays as required), convert the entry with `court-deadline resolve --index I --date YYYY-MM-DD` in the batch, and push to calendar via calendar-sync.
 
 ## Workflow
 
@@ -217,32 +227,30 @@ Apply? [Y/N]
 
 ### Step 6: Batched Write
 
-Once the lawyer confirms:
+Once the lawyer confirms, apply the approved decisions as a **sequence of tracker_write.py calls** (see "Tracker Writes" above), in file-number order — all of a matter's items together, matching the Step 5 summary:
 
-1. **Backup the tracker once** (single timestamped copy in `backups/` beside the tracker). Do not back up per-item. One backup for the whole batch.
-2. **Check for lock file again** right before opening. If it appeared, abort and tell the lawyer.
-3. Open the workbook once (`openpyxl.load_workbook`), apply all approved changes in memory, save once. Rationale: the batched write is atomic. Either every approved change lands or none do. Per-item writes would leave the tracker in an inconsistent state if one failed mid-batch.
-4. For each approved decision. **Last Activity rule for ALL resolve actions: set column G to max(current G, timeline-entry event date). Never a future date.**
+1. **Restore point.** Each guard call makes its own timestamped backup in `backups/`; the FIRST call's backup is the restore point for the whole sweep. Capture its path from the first call's output and cite it in the final report.
+2. If the first call fails on the Excel lock file, stop and tell the lawyer to close Excel.
+3. Per approved decision (the guard bumps Last Activity automatically — `timeline` sets it to max(current, event date), never a future date):
 
    **`action: "resolve"` on `type: "court_deadline"`:**
-   - Parse column S JSON, remove the entry at the given index, serialize back. If the array is now empty, write empty string (not `"[]"`).
-   - Append to column J (Timeline): `YYYY-MM-DD: [timeline_entry]`, using the `date` from the decision (the actual event date, not today).
-   - Update column G (Last Activity) per the rule above.
+   - `court-deadline remove --file-no N --index I` — removes the entry and keeps the JSON structure and sort order intact.
+   - `timeline --file-no N --date <date from the decision, the actual event date, not today> --text "[timeline_entry]"`.
 
    **`action: "resolve"` on `type: "next_action"`:**
-   - Write the new Next Action string (from `new_next_action`) to column I. If the user indicated there's no new next action, write the next procedural step in prose (e.g., "Awaiting client instructions re: next steps").
-   - Append timeline entry.
-   - Update Last Activity per the rule above.
+   - `update --file-no N --set "Next Action / Deadline=[new_next_action]"`. If the user indicated there's no new next action, set the next procedural step in prose (e.g., "Awaiting client instructions re: next steps").
+   - `timeline` call for the entry.
 
    **`action: "resolve"` on `type: "limitation"` with subtype "claim_filed":**
-   - Clear columns P (Discovery Date), Q (Limitation Statute), R (Limitation Deadline). Set all to empty.
-   - Append timeline entry: `YYYY-MM-DD: Claim filed; limitation period closed.` (use issuance date from evidence).
-   - Update Last Activity per the rule above.
+   - `update --file-no N --set "Discovery Date=" --set "Limitation Statute=" --set "Limitation Deadline="` (empty values clear P/Q/R).
+   - `timeline --file-no N --date <issuance date from evidence> --text "Claim filed; limitation period closed."`
+
+   **Anchored entry the lawyer resolved with a date:** `court-deadline resolve --file-no N --index I --date YYYY-MM-DD`.
 
    **`action: "unresolved"` or `"skip"`:** no tracker write for this item.
 
-5. Save the workbook. **Verify the saved file opens cleanly** by re-loading with openpyxl and confirming expected row count and that all edits are visible. If verification fails, alert the lawyer and point to the most recent backup.
-6. Apply the row-formatting rules from `matter-tracker` SKILL.md when writing cells (borders, font, wrap text on C/I/J/S/U only). Most updates touch columns I, J, G, P, Q, R, or S, which are all existing cells on existing rows, so formatting should already be correct. Double-check wrap_text is preserved on any column you touch in I, J, or S.
+4. **A failed call stops the sweep at that item.** Non-zero exit = that write did not land (everything before it did). Report the stderr, what was applied, and what remains unapplied — do not continue past the failure and never retry with direct openpyxl.
+5. No separate verify or validator step — each guard call saves atomically and runs validate_tracker.py itself. The guard writes values into existing cells only, so row formatting is untouched.
 
 ### Step 7: Calendar Sync
 
@@ -301,7 +309,7 @@ STALE BUT NOT OVERDUE:
 
 ## Behaviour Rules
 
-1. **One backup per batch, not per item.** The batched write is atomic.
+1. **The first backup of the sweep is the batch restore point.** Each guard call backs up on its own; cite the first call's backup path in the final report. A failed call stops the sweep at that item — report what was applied and what remains.
 2. **Never auto-clear limitation deadlines.** Always require the lawyer's explicit "Claim filed" confirmation.
 3. **Never auto-close matters.** If a matter looks closeable, add it to the red-flag list with "run close matter [name]" as the suggested action.
 4. **Always show the batch summary before writing.** No silent writes.
@@ -309,10 +317,10 @@ STALE BUT NOT OVERDUE:
 6. **If Gmail is unavailable, proceed with folder-only investigation and warn the lawyer up front.** Evidence will be weaker; expect more "unresolved" outcomes.
 7. **If the matter folder (column T) is blank**, skip the folder scan for that matter and rely on Gmail alone. Don't try to fuzzy-resolve the folder inside this skill. That belongs to matter-tracker.
 8. **Ambiguous evidence defaults to "unresolved".** When in doubt, flag rather than auto-resolve. This is a cleanup skill, not an inference skill.
-9. **Preserve timeline chronology.** New timeline entries go in chronological position when merged into column J. If the event date matches an existing entry, skip (don't duplicate).
+9. **Timeline entries carry the actual event date.** Append via `timeline` with the event date, not today. If column J already holds an entry with the same date and substance, skip it (don't duplicate).
 10. **Report the full numbers at the end.** "Scanned N matters, N1 overdue items, N2 resolved, N3 flagged, N4 skipped."
 11. **Stop and ask if scan detects zero overdue items.** Say "Tracker is clean, no overdue items. Nothing to do." Do not proceed to investigation.
-12. **Court deadlines JSON index matters.** When removing an entry from column S, use the index from the parsed JSON array. Recompute indices if multiple entries on the same matter are being removed (remove highest index first, or reload the JSON between removals).
+12. **Court deadlines index matters.** `court-deadline remove` takes the 0-based index of the array as currently stored. When removing multiple entries on the same matter, remove the highest index first — and since the guard re-sorts the array on every mutation, re-read column S between calls if there is any doubt about the surviving indices.
 13. **Group same-date events across columns I and S.** A hearing listed in both columns (same date, overlapping description) is one event. Confirm once, write to both columns.
 14. **Investigate in batches of 8 matters.** Emit a progress line between batches. Persist investigated evidence to `/tmp/overdue-triage-session.json` so an interrupted run can resume without re-pulling Gmail.
 15. **Scanned PDFs count as evidence.** Filename + modification date on a court endorsement or affidavit-of-service PDF is sufficient to establish occurrence even when text extraction fails. Record the filename in the evidence bundle.
@@ -339,7 +347,7 @@ A concise reference for writing the red-flag list. Use these as templates. Custo
 Every overdue-triage run ends with a final message that includes:
 
 1. Scan summary (N matters scanned, K overdue items found).
-2. Batch write result (N1 resolved, backup path).
+2. Batch write result (N1 resolved; first backup path = restore point for the whole batch; if a call failed, what was applied and what remains).
 3. Calendar sync diff (N events removed, M updated).
 4. Red-flag list in full (every unresolved item with suggested action).
 5. Any errors or warnings (Gmail unavailable, folder not found, etc.).

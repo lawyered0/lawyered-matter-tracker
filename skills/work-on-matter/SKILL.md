@@ -141,7 +141,7 @@ If ANY material, refresh the brief BEFORE Step 3:
 2. **Update `## Tracked Threads`.** Every thread that produced findings on this load (material OR informational) gets a line with the latest message date as "last seen". New threads appended; existing entries advanced. This is what makes Pass C effective on the next load — skipping it reopens the gap.
 3. Update `## Last Updated` to today.
 4. Save via the **Universal Save Procedure** in Step 4. If no brief existed, create it.
-5. Update Last Activity (column G) and append a single combined Timeline entry (column J) via the lightweight tracker write. Example: `2026-04-28 -- Brief refreshed from email: opposing counsel sent updated lease; client confirmed bank trail.`
+5. Append a single combined Timeline entry via the lightweight tracker write (one `timeline` call — it bumps Last Activity too; see Step 4). Example: `2026-04-28 -- Brief refreshed from email: opposing counsel sent updated lease; client confirmed bank trail.`
 6. Continue to Step 3.
 
 If all findings are informational, still update `## Tracked Threads` for thread movement (advances "last seen" so Pass C doesn't re-process). Brief save, no tracker write. Step 3 surfaces the items in "What's new".
@@ -152,7 +152,7 @@ If all findings are informational, still update `## Tracked Threads` for thread 
 
 A runway back into the work, not a closing memo. Order: rules of engagement first (so they bind before drafting), live story middle, deadlines and what's new last (freshest when work begins).
 
-**Length discipline.** Short. The example below is the target length, not the floor. The brief is the source of truth; the orientation is a pointer back into it.
+**Length discipline.** Short. The example in TEMPLATES.md § Example Orientation is the target length, not the floor. The brief is the source of truth; the orientation is a pointer back into it.
 
 Skeleton (omit blocks that don't apply):
 
@@ -165,35 +165,7 @@ Skeleton (omit blocks that don't apply):
 
 **If the orientation exceeds ~25 lines including blanks, you're summarizing, not orienting. Cut.**
 
-**Example orientation:**
-
-```
-Matter: 2026-148 | Marcus Feld
-Description: Toronto Small Claims defence (CAM/utility dispute)
-Status: Open
-Last Activity: 2026-04-25
-Next Action: 2026-05-03: Defence due
-
-Comms / Preferences on file (treat as binding):
-- 2026-04-23 — Written only on this file; no calls. Per the lawyer.
-
-From the matter brief:
-- Sublease structure: Mason ↔ Quikserve ULC (Master Lease); Marcus is sublessee under 2010 Sublease assigned to him 2019. No privity to landlord.
-- Plaintiffs amended out Quikserve April 22, severing the only contractual chain.
-- L.M.L. Group Inc. has paid water directly to City of Toronto: $4,487.05 verified bank trail.
-
-Recent strategic decisions (full log in _matter-decisions.md):
-- 2026-04-22 — Declined Quikserve co-rep agreement. Reason: indemnity creates conflict.
-- 2026-04-25 — Lead with no-privity defence, file Form 9A.
-
-Court deadlines: Defence due May 3 (6 days)
-
-Brief refreshed from email pull. Material updates merged in:
-- Apr 26, 8:43am — Stephen Marsh (Quikserve counsel) sent updated Master Lease scan
-- Apr 27, 9:12am — Marcus confirmed no other bank account holds water payments
-
-Ready to go. What are we working on?
-```
+→ Worked example orientation (the target length): TEMPLATES.md § Example Orientation.
 
 End every orientation with: **"Ready to go. What are we working on?"**
 
@@ -316,51 +288,11 @@ Current-state snapshot. Tracker timeline holds historical record. Decisions log 
 
 **Reasoning still belongs in `_matter-decisions.md`.** If a brief Risk or Position runs more than three or four lines because it includes reasoning, split it: short summary stays in the brief with "full reasoning in _matter-decisions.md"; full reasoning goes in the decisions log entry of the same date.
 
-**Core skeleton is mandatory, in this order:** Matter Summary → Current Stage → Roles → Risks & Issues Flagged → Positions Taken / Advice Given → Open Items → Last Updated. The heading MUST be `# [Client Name] — [File #]` — briefs have turned up in the wild with no File # anywhere. Matter-specific sections (Key Terms, chronology, etc.) go AFTER the core sections. Directly under the heading sits a 3-line status bar (see Format below): ACTIVE DEADLINE (next dated deadline or "none"), LAST ACTION (date + one line), AWAITING (who owes what). **Refresh the status bar on every save.**
+**Core skeleton is mandatory, in this order:** Matter Summary → Current Stage → Roles → Risks & Issues Flagged → Positions Taken / Advice Given → Open Items → Last Updated. The heading MUST be `# [Client Name] — [File #]` — briefs have turned up in the wild with no File # anywhere. Matter-specific sections (Key Terms, chronology, etc.) go AFTER the core sections. Directly under the heading sits a 3-line status bar (see TEMPLATES.md § Brief Format Skeleton): ACTIVE DEADLINE (next dated deadline or "none"), LAST ACTION (date + one line), AWAITING (who owes what). **Refresh the status bar on every save.**
 
 **Section-level as-of dates.** The Roles, Risks & Issues Flagged, Positions Taken, and Open Items headings carry `[last update: YYYY-MM-DD]` on the heading line; update it whenever that section's content changes.
 
-**Format:**
-
-```markdown
-> PRIVILEGED & CONFIDENTIAL — Solicitor-Client Privilege / Work Product
-
-# [Client Name] — [File #]
-
-ACTIVE DEADLINE: [next dated deadline, or "none"]
-LAST ACTION: [YYYY-MM-DD — one line]
-AWAITING: [who owes what]
-
-## Matter Summary
-[2-3 sentences: what this is, who the parties are, what stage]
-
-## Current Stage
-[One line: where the matter sits procedurally]
-
-## Roles [last update: YYYY-MM-DD]
-- Name (role) — source: [email date / doc filename + page / tracker col X]
-
-## Risks & Issues Flagged [last update: YYYY-MM-DD]
-- [Concise bullets]
-
-## Positions Taken / Advice Given [last update: YYYY-MM-DD]
-- [Current state, not historical reasoning]
-
-## Open Items [last update: YYYY-MM-DD]
-- [Unresolved, pending, or needs follow-up]
-
-## Key Terms / Provisions
-[Transactional only — price, term, material conditions, unusual clauses]
-
-## Tracked Threads
-- [Gmail thread ID] — "[short subject label]" — last seen YYYY-MM-DD
-
-## Resolved / Historical
-- [YYYY-MM-DD — Demoted item with one-line resolution note. Created on first demotion; append-only.]
-
-## Last Updated
-[Date]
-```
+→ Full skeleton with status bar and placeholder text: TEMPLATES.md § Brief Format Skeleton. Read it before creating a brief or rebuilding brief sections.
 
 Omit sections that don't apply, except the **Roles block, which is mandatory** — the one place each person is pinned to a source. Paraphrasing a role in an outgoing email without confirming it here is how role errors leak into client-facing work.
 
@@ -385,17 +317,7 @@ The file's strategic memory. Capture decisions whose REASONING you'd want a futu
 
 **Every entry is tagged and reasoned.** Start each entry with `[Decision]`, `[Interim]`, or `[Blocker]`, then 1–2 sentences of reasoning plus alternatives considered/rejected — not implementation narration.
 
-- Good: `- 2026-04-22 — [Decision] Declined Quikserve co-rep agreement. Reason: indemnity creates direct conflict; considered limited-scope co-rep, rejected — conflict not waivable.`
-- Bad: `- 2026-04-22 — Reviewed co-rep agreement and emailed Quikserve counsel.` (re-hash of what was done; no decision, no reasoning)
-
-```markdown
-> PRIVILEGED & CONFIDENTIAL — Solicitor-Client Privilege / Work Product
-
-# [Client Name] — [File #] — Decisions Log
-
-- 2026-04-22 — [Decision] Declined Quikserve co-rep agreement. Reason: indemnity creates direct conflict between sublandlord and subtenant; considered limited-scope co-rep, rejected as unwaivable.
-- 2026-04-25 — [Decision] Recommended $225/hr full / half during training (vs. Iullia's $250/hr ask). Reason: bridges her hospitalist anchor without conceding the partnership-stage frame.
-```
+→ Format block and good-vs-bad example pair: TEMPLATES.md § Decisions Log Format. Read it before the first decisions-log append of a session.
 
 Routine document review and email drafting don't warrant entries — those go in the tracker timeline.
 
@@ -405,20 +327,13 @@ File-specific operational rules. Loaded at the top of every session, treated as 
 
 **Append-only. No cap.** Same rules as decisions log.
 
-```markdown
-> PRIVILEGED & CONFIDENTIAL — Solicitor-Client Privilege / Work Product
-
-# [Client Name] — [File #] — Communications & Client Preferences
-
-- 2026-04-27 — Written only on this file; no calls. Per the lawyer.
-- 2026-04-15 — Always cc Laura Kim on opposing counsel correspondence. Per the lawyer.
-```
+→ Format block: TEMPLATES.md § Comms File Format. Read it before the first comms-file append of a session.
 
 Only entries that bind future sessions belong here. One-off instructions don't.
 
 #### Counterparty Notes (`_counterparty-notes.md`)
 
-Practice-level file in the Open Files root (beside the tracker), not per-matter. Records patterns about recurring non-clients — opposing counsel, examiners, adjusters, clerks. Per entry: name, role, matters seen, responsiveness, preferred channel, tactics observed. Append or update when a matter concludes or a clear pattern emerges. At session start (Steps 1–2), if the matter's opposing counsel or a counterparty appears in this file, surface the entry in the Step 3 orientation.
+Practice-level file in the Open Files root (beside the tracker), not per-matter. Records patterns about recurring non-clients — opposing counsel, examiners, adjusters, clerks. → Entry format: TEMPLATES.md § Counterparty Notes Entry Format. Append or update when a matter concludes or a clear pattern emerges. At session start (Steps 1–2), if the matter's opposing counsel or a counterparty appears in this file, surface the entry in the Step 3 orientation.
 
 #### Universal Save Procedure
 
@@ -431,23 +346,26 @@ For each file:
 3. **Write.** Brief: merge into the snapshot — rewrite live sections, demote superseded items to `## Resolved / Historical`. Decisions / comms: append at the bottom; never edit existing entries.
 4. **Verify.** Re-open and confirm new content is present. If verification fails, alert the user and point to the most recent backup.
 
-**If no file exists**, create from the format spec. Don't create empty files preemptively.
+**If no file exists**, create from the format spec in TEMPLATES.md (§ Brief Format Skeleton / § Decisions Log Format / § Comms File Format). Don't create empty files preemptively.
 
 **If matter folder path is unresolved** (Step 2 failed), save to the tracker's directory as `<filename>-[client-name].md` and tell the user to move it.
 
 #### Tracker Update (lightweight inline write)
 
-Three targeted cell updates on the matter's row:
+Tracker writes go through tracker_write.py — never ad-hoc openpyxl:
 
-1. **Last Activity (column G)**: today's date.
-2. **Timeline (column J)**: append `YYYY-MM-DD -- [brief description]`. Never overwrite prior entries.
-3. **Next Action (column I)**: update only if changed.
+```
+python3 scripts/tracker_write.py <subcommand> --tracker "<tracker path>" ...
+```
 
-**Lock check first.** If `~$matter-tracker.xlsx` exists beside the tracker, it is likely open in Excel — warn the user and wait before writing (same rule as the matter-tracker skill; a write against an open workbook can fail or corrupt it). **Then backup.** Copy `matter-tracker.xlsx` to `backups/matter-tracker-backup-YYYY-MM-DD.xlsx`. After write, re-open with openpyxl to confirm clean load, then run `python3 scripts/validate_tracker.py <tracker> <latest backup>` and surface any FAIL to the lawyer before reporting success. Never auto-delete older backups.
+This skill uses two subcommands:
 
-Use xlsx skill's openpyxl approach. Keep the row reference from Step 1.
+1. `timeline --file-no N --date YYYY-MM-DD --text "[brief description]"` — appends the entry to the Timeline (column J, never overwrites prior entries) and bumps Last Activity (column G) per the max rule. One call covers both cells.
+2. `update --file-no N --set "Next Action / Deadline=..."` — only if Next Action changed.
 
-**If tracker write fails** (permissions, file locked), don't block work. Flag once ("Couldn't update the tracker — may be open elsewhere") and continue.
+Use the matter's File # from Step 1 for `--file-no`. Each call handles the Excel-lock check, the timestamped backup into `backups/`, the atomic save, and runs validate_tracker.py automatically — no separate lock check, backup, re-open verify, or validator step.
+
+**A non-zero exit means nothing was saved.** Report the stderr to the lawyer (tracker open in Excel, value rejected, etc.); never fall back to a direct openpyxl write. Don't block work over it — flag once ("Couldn't update the tracker — [reason from stderr]") and continue.
 
 #### Calendar Sync Hook
 
@@ -463,7 +381,7 @@ After the tracker write:
 
 **Tell the user** briefly when a calendar change landed: "Calendar updated: follow-up on Apr 22." Silent changes erode trust.
 
-If calendar-sync or Calendar MCP unavailable, skip and note once. On any sync failure, ALSO append to the brief's Open Items: `[CALENDAR SYNC FAILED YYYY-MM-DD — "<event>" NOT on Key Dates; retry or add manually]`. The note-once rule resets each session — if sync is still failing in a new session, report it again.
+If calendar-sync or Calendar MCP is unavailable OR any sync fails (unavailability counts as a failure), note it once in chat AND append to the brief's Open Items: `[CALENDAR SYNC FAILED YYYY-MM-DD — "<event>" NOT on Key Dates; retry or add manually]`. The note-once rule resets each session — if sync is still failing in a new session, report it again.
 
 #### What to Tell the User After Saving
 
@@ -475,5 +393,5 @@ After the **first** save in a session, name what was saved: "Saved: brief, decis
 2. **Step 2.5 always runs.** Three passes (C → A → B), past 7 days minimum, 30 days max. Read mode scales with brief freshness; the search itself doesn't. Update `## Tracked Threads` on every refresh or Pass C silently regresses. If Gmail errors or rate-limits, stop calling it, orient from what's already in hand, and say so — never present a partial pull as complete.
 3. **Three files, three lifecycles.** Brief = snapshot, demote don't delete. Decisions and comms = append-only, never edited.
 4. **Source-first for everything that leaves the firm, AND for any categorical claim about prior firm involvement.** Tracker + filesystem + Gmail check before any "we never" assertion.
-5. **Backup, mtime-check, write, verify — every save.** Same for the tracker.
+5. **Backup, mtime-check, write, verify — every save of the matter files.** Tracker writes go through tracker_write.py, which backs up, saves atomically, and validates on its own; non-zero exit = not saved, report stderr, never write with openpyxl directly.
 6. **Calendar sync after every tracker change.** If calendar-sync errors, log once and continue.

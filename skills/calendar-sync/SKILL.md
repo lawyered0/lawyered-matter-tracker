@@ -109,6 +109,7 @@ Last synced: {ISO timestamp}
 
 - `CODE` ∈ `{COURT, LIM, FUP, TFUP}`.
 - `slug` = lowercased, non-alphanumeric stripped, first 40 chars of the short_description. For `LIM` the slug is always `expiry` (only one limitation event per file). For `FUP` the slug is always `nextaction` (only one follow-up event per file for the column I value — new dated Next Actions replace the prior one).
+- **COURT slug mutation warning:** the slug derives from the deadline description, so editing a column S description after it has synced changes the sync-key — the next reconcile will create a NEW event and orphan the old one. When a synced deadline's description changes, cancel the old event (by its old slug) in the same operation.
 
 This gives each event a stable, human-readable identity that survives edits to the title or body.
 
@@ -182,6 +183,7 @@ When the user resolves an item, call `cancel_deadline(file#, category, slug)`.
 
 - **Never push a deadline in the past.** Skip any entry where date ≤ today.
 - **Anchored entries are not syncable.** Column S entries with an `anchor` field and no `date` have no concrete date yet — skip them, but always report: "N relative deadlines awaiting anchor dates — not on calendar." Never skip them silently.
+- **Orphan cleanup on anchoring.** If a dated event was pushed for a deadline that has since been replaced by an anchored entry (or removed), reconcile() must cancel the stale event by sync-key — the desired set is computed from the tracker's CURRENT dated entries only.
 - **One LIM event per file.** If the limitation deadline changes, `upsert_deadline` updates in place.
 - **One FUP event per file.** Column I is a single next-action field; the calendar mirrors that. If the user changes Next Action from "Call coordinator" to "Serve Form 1B", the old FUP event is updated in place.
 - **Multiple COURT events per file.** Each entry in column S JSON gets its own event, slugged by description.

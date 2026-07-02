@@ -19,6 +19,16 @@ Scan Gmail for recent emails, match them against open matters in the tracker, su
 - **Matter tracker spreadsheet**: `matter-tracker.xlsx` — located using the same resolution logic as the other skills (CWD → parent → grandparent → ask).
 - **Gmail MCP tools**: `search_threads` (find threads by query) and `get_thread` (read a full thread by ID). There is no message-level search and no single-message read — everything is thread-level. `search_threads` truncates the per-thread message list, so use it to discover thread IDs and read each thread with `get_thread`. If Gmail tools are unavailable, skip the email scan and run only the tracker review (deadlines, stale matters).
 
+## Tracker Writes
+
+Tracker writes go through tracker_write.py — never ad-hoc openpyxl (openpyxl is fine for reading):
+
+```
+python3 scripts/tracker_write.py update --tracker "<tracker path>" --file-no N --set "COLUMN=value" [--set ...]
+```
+
+`update` is the only subcommand this skill uses (Step 5 auto-fills and approved gap fills). Every call does the Excel-lock check, a timestamped backup into `backups/`, an atomic save, and runs validate_tracker.py automatically. **Non-zero exit = not saved** — report the stderr to the lawyer; never fall back to direct openpyxl writes. The guard also rejects malformed values (bad date formats, multi-line or over-long Next Action, unknown columns) with exit 2 — if it rejects, fix the value to match the column contract and re-run; don't bypass.
+
 ## Workflow
 
 ### Step 1 — Load the Tracker
@@ -109,12 +119,18 @@ These fields require judgment. Present them in the TRACKER GAPS section of the t
 
 - **Opposing Party (column H)**: If blank and the email thread identifies an opposing party by name (in a demand letter header, court filing, or "on behalf of [name]" language), suggest the value. Do NOT auto-fill — Opposing Party feeds the conflict check, and a misidentified opposing party propagates into a structural error in the CRM. Surface the suggestion with one line of evidence (e.g., "Suggested opposing party: Beacon GSI Inc. — from Green demand letter Mar 14 2026").
 - **Matter Description (column C)**: If the current description is vague or generic (e.g., just "Dispute" or "Legal matter") and the email thread reveals specifics (property address, claim type, transaction details), suggest an updated description.
-- **Next Action (column I)**: If blank and the email thread implies an obvious next step (e.g., "please review and sign" → next action: "Review and sign documents"), suggest it. Format contract: one line, ≤80 chars, leading `YYYY-MM-DD: ` only when that date is the trigger for the action; undated actions get no leading date; dates that are context rather than the trigger stay in the description.
+- **Next Action (column I)**: If blank and the email thread implies an obvious next step (e.g., "please review and sign" → next action: "Review and sign documents"), suggest it in the TRACKER GAPS section — NEVER write column I without the lawyer's approval of the suggestion (matter-tracker and work-on-matter own that column; daily-triage writes it only on approval, via `update --set "Next Action / Deadline=..."`). Format contract: one line, ≤80 chars, leading `YYYY-MM-DD: ` only when that date is the trigger for the action; undated actions get no leading date; dates that are context rather than the trigger stay in the description.
 - **Limitation Deadline (column R)**: If blank and the email thread references a limitation period or incident date from which one can be calculated, flag it with the suggested date and reasoning.
 
 #### Implementation
 
-Use openpyxl to write auto-fill values directly to the tracker file. Load with `load_workbook()` (not `data_only=True` — preserve formulas), update the cells, and save. Do not recalculate formulas — just save.
+Write auto-fill values with the guard — one `update` call per matter, batching that matter's fills as multiple `--set` flags:
+
+```
+python3 scripts/tracker_write.py update --tracker "<tracker>" --file-no N --set "Client Email=..." --set "Other Parties / Related Persons=..." --set "Last Activity=YYYY-MM-DD"
+```
+
+A non-zero exit means nothing was written. If the guard rejected the value (exit 2), fix it to match the column contract and re-run — never bypass with a direct openpyxl write.
 
 Keep a running list of all changes made for the triage summary. Format:
 ```
@@ -132,7 +148,7 @@ Independent of the email scan, check the tracker for:
 2. **Court deadline alerts**: Parse column S (Court Deadlines JSON) for any deadlines within 30 days.
 3. **Stale matters**: Any matter where column G (Last Activity) is more than 21 days ago. These may need a follow-up or status check. Before the staleness math, verify G is empty or a valid `YYYY-MM-DD` — if it contains prose, flag it in TRACKER ALERTS as a data-quality warning with a suggested fix and skip staleness math for that row rather than erroring.
 4. **Blank Next Action**: Any matter where column I (Next Action) is blank — these need a next step assigned.
-5. **Calendar reconciliation sweep**: For each OPEN matter with a dated Limitation Deadline (R) or dated Court Deadlines (S) entry in the future, check the Key Dates calendar for a matching event (by sync-key, or a title search on the `[file# ` prefix). Push any missing events via the calendar-sync skill. Bounded: future-dated items only, open matters only. Report: "Calendar sweep: N missing events pushed, M already covered."
+5. **Calendar reconciliation sweep**: For each OPEN matter with a dated Limitation Deadline (R), dated Court Deadlines (S) entry, or dated Next Action (I) in the future, check the Key Dates calendar for a matching event (by sync-key, or a title search on the `[file# ` prefix). Push any missing events via the calendar-sync skill. Bounded: future-dated items only, open matters only. Report: "Calendar sweep: N missing events pushed, M already covered."
 6. **Expected-but-missing email**: For court deadlines in column S within 14 days, if no court correspondence for that matter arrived in the past 7 days, flag: "deadline approaching, no court correspondence in 7 days — confirm notice with court office."
 
 ### Step 7 — Classify Unmatched Emails
@@ -321,4 +337,4 @@ After the lawyer responds to the decision list:
 13. **Number the actionable items.** Categories A, B, and C must be presented as a single numbered list (not three separate numbered lists). This lets the lawyer respond with "1, 3, 5" without ambiguity.
 14. **One-line summaries with context.** Each numbered item gets: sender name + email, a one-line description of what the thread is about, and why it's in this category (e.g., "You drafted a response" or "First contact, no reply yet"). This gives the lawyer enough to decide without re-reading the email.
 15. **Auto-fill confidence threshold.** Only auto-fill a field when the match is unambiguous. If the matched email could be from the client OR a third party (e.g., a paralegal forwarding on behalf of a client), don't auto-fill — surface it in TRACKER GAPS instead. When in doubt, ask rather than write.
-16. **Handle gap approvals inline.** If the lawyer approves a suggested gap fill (e.g., responds "yes" to a limitation deadline suggestion), write it to the tracker immediately using the same openpyxl approach. No need to run `update matter` for a single field fix.
+16. **Handle gap approvals inline.** If the lawyer approves a suggested gap fill (e.g., responds "yes" to a limitation deadline suggestion), write it immediately with a tracker_write.py `update` call (e.g., `--set "Limitation Deadline=YYYY-MM-DD"` or `--set "Next Action / Deadline=..."`). If the guard rejects the value, fix the format and re-run — don't bypass it. No need to run `update matter` for a single field fix.

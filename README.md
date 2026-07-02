@@ -23,7 +23,9 @@ A practice management system for solo and small law firms, powered by [Claude](h
 
 ### 1. Install the skills
 
-Install the five skills from this repo through Claude's UI, or import them from the `skills/` directory.
+Install the five skills from this repo through Claude's UI, or import them from the `skills/` directory. Each skill is a folder containing `SKILL.md` (two also ship a companion reference file the skill reads on demand — keep the folder together when installing).
+
+> **Deterministic writes:** the skills never edit the spreadsheet with ad-hoc code — every write goes through [`scripts/tracker_write.py`](scripts/tracker_write.py), which does an Excel-lock check, a timestamped backup, format validation (dates, single-line next actions, court-deadline JSON), duplicate file-number prevention, an atomic save, and a post-write integrity check on every call. Copy `scripts/` alongside your client directory (or adjust the path in the skills) so the guard is available.
 
 > **Want Clio integration?** There's a [Clio-integrated variant of this repo](https://github.com/lawyered0/lawyered-matter-tracker-clio) that adds one-way sync from the tracker to [Clio Manage](https://www.clio.com/ca/clio-manage/) via the [clio-mcp](https://github.com/lawyered0/clio-mcp) server. Use that one instead if you want matters to appear in Clio automatically.
 
