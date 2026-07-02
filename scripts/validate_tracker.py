@@ -100,6 +100,22 @@ def main():
     if "Closed Matters" in wb.sheetnames:
         validate_sheet(wb["Closed Matters"], "Closed Matters")
 
+    # A File # must be unique across BOTH sheets — a closed matter keeps its
+    # number forever. Per-sheet checks alone miss a number reused on the other
+    # sheet (e.g. a matter closed the same day a new one is opened).
+    sheet_nums = {}
+    for sheet_name in ["Open Matters", "Closed Matters"]:
+        if sheet_name in wb.sheetnames:
+            ws = wb[sheet_name]
+            sheet_nums[sheet_name] = {
+                ws.cell(row=r, column=1).value
+                for r in range(2, ws.max_row + 1)
+                if ws.cell(row=r, column=1).value
+            }
+    if len(sheet_nums) == 2:
+        for fn in sorted(str(x) for x in (sheet_nums["Open Matters"] & sheet_nums["Closed Matters"])):
+            err(f"File # {fn} appears on both Open Matters and Closed Matters")
+
     if backup_path and backup_path.exists():
         try:
             bk = load_workbook(backup_path, data_only=True)

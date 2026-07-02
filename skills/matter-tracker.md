@@ -38,7 +38,7 @@ Both sheets use these columns:
 
 | Column | Header | Format | Notes |
 |--------|--------|--------|-------|
-| A | File # | Text (e.g. "2026-001") | Auto-assigned: YYYY-NNN, incrementing from last entry |
+| A | File # | Text (e.g. "2026-001") | Auto-assigned: YYYY-NNN. Next number = highest NNN across **both** the Open Matters AND Closed Matters sheets, + 1. A closed matter keeps its number forever — never reuse it. (Scanning only Open Matters reuses a number when a matter is closed shortly before a new one is opened.) |
 | B | Client Name | Text | Primary client name. **Standard format: `Entity Name (Principal Name)`** — e.g. "Acme Group Inc. (Blake Murphy)". For individual clients with no entity, just use their name. For individuals acting through a numbered company, lead with the entity: "10014056 Holdings LLC (Jane D)". If multiple key individuals exist (e.g. two directors), comma-separate them inside the brackets: "ABC Real Estate Solutions Inc. (Bob Adams, Carol Chen)". **Never use slash format** (e.g. "Name / Corp") — always use the brackets format for consistency. This ensures the conflict check catches both the entity and the individual(s) behind it. |
 | C | Matter Description | Text (wrap text) | Brief description of the engagement |
 | D | Status | Text | "Open" or "Closed" |
@@ -374,7 +374,7 @@ The tracker only knows about matters that were entered into it. Files that preda
    Add to tracker? Any corrections?
    ```
 7. After confirmation:
-   - Load the tracker (see "Finding the Tracker"), assign next File #, append row
+   - Load the tracker (see "Finding the Tracker"), assign next File # (max NNN across BOTH Open and Closed Matters sheets, + 1 — never reuse a closed matter's number), append row
    - If no tracker exists -> create new tracker from template in the Open Files directory, then add row
    - Set Status = "Open", Date Opened = earliest timeline date (or today), Last Activity = today
    - Set Conflict Check Done = "✓" (the conflicts check was run as part of opening). Set Client ID Verified = "Pending" unless the lawyer confirms Veriff is already complete for this client.
