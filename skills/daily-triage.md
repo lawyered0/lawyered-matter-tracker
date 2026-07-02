@@ -60,6 +60,8 @@ Run all five checks per thread:
 
 Matching should be **case-insensitive** and support **partial matches** (last name matches are sufficient — "Lee" matches "Nadia Lee" in column B).
 
+**Ambiguous matches.** When a thread matches 2+ open matters, apply precedence: sender-email match > role-holder address > matter-specific keyword > party-name match. True ties are surfaced as ambiguous with both candidates listed — never silently filed under the first match.
+
 Categorize each email as:
 - **Matched** — clearly belongs to an open matter
 - **Possibly matched** — partial or ambiguous match (e.g., common last name appears in multiple matters)
@@ -70,11 +72,12 @@ Categorize each email as:
 For each matched email, assign a priority:
 
 **URGENT** (surface at top, with warning):
-- Email from a court address (`@ontario.ca`, `@scj-csj.ca`, `@osjct.ca`, `@hrto.gov.on.ca`, any `.gc.ca` domain, or any email with "court" or "tribunal" in the domain)
+- Email from a court or tribunal address (any domain listed in `COURT_EMAIL_DOMAINS` in CLAUDE.md, or any email with "court" or "tribunal" in the domain), or whose display name contains Court, Tribunal, Clerk, Registrar, Justice, or Master. Check To/Cc headers for court addresses too, not just From — a thread copied to the court is court correspondence.
 - Email referencing a hearing date, trial date, or court appearance
 - Email containing the words "order", "endorsement", "judgment", or "ruling"
 - Email with a deadline or due date within 7 days
 - Email from opposing counsel with a settlement offer, demand, or time-limited proposal
+- Email from opposing counsel (address in the column H context or a role-holder in the matter brief) containing scheduling/settlement keywords — "settlement", "offer", "conference", "hearing", "respond by", "deadline", or a date within 7 days
 
 **IMPORTANT** (surface prominently):
 - Client email with instructions or questions requiring a response
@@ -94,7 +97,8 @@ For each matched email, compare what was found in the email/thread against what'
 
 These fields are low-risk and objective. If the tracker field is blank and the email provides a clear value, write it directly to the tracker:
 
-- **Client Email (column M)**: If blank and the matched email is clearly from the client (not opposing counsel, not a court), fill it with the sender's email address.
+- **Client Email (column M)**: If blank and the matched email is clearly from the client (not opposing counsel, not a court), fill it with the sender's email address. Blank-fill only — if a DIFFERENT address than column M is discovered, do NOT overwrite silently: surface it in TRACKER GAPS for confirmation, keep multiple role-annotated addresses if both are live ("primary@x.com (principal), asst@y.com (assistant)"), and append a Timeline entry recording the change and its source.
+- **Last Activity (column G)**: If today's scan matched new inbound email to the matter and G is older than today, update G to today. Skip auto-replies, read receipts, and calendar invites. Never set G to a future date.
 - **Other Parties (column U)**: If blank and the email thread identifies additional parties (co-plaintiffs, witnesses, insurers, agents) that are not themselves the opposing party, fill it. Append to existing values if the column already has content. Do NOT auto-fill anyone whose role might be adverse — that belongs in Opposing Party and goes through Surface for Review.
 
 After auto-filling, note what was added in the triage output (see Step 8 format) so the lawyer is aware.
@@ -105,7 +109,7 @@ These fields require judgment. Present them in the TRACKER GAPS section of the t
 
 - **Opposing Party (column H)**: If blank and the email thread identifies an opposing party by name (in a demand letter header, court filing, or "on behalf of [name]" language), suggest the value. Do NOT auto-fill — Opposing Party feeds the conflict check, and a misidentified opposing party propagates into a structural error in the CRM. Surface the suggestion with one line of evidence (e.g., "Suggested opposing party: Beacon GSI Inc. — from Green demand letter Mar 14 2026").
 - **Matter Description (column C)**: If the current description is vague or generic (e.g., just "Dispute" or "Legal matter") and the email thread reveals specifics (property address, claim type, transaction details), suggest an updated description.
-- **Next Action (column I)**: If blank and the email thread implies an obvious next step (e.g., "please review and sign" → next action: "Review and sign documents"), suggest it.
+- **Next Action (column I)**: If blank and the email thread implies an obvious next step (e.g., "please review and sign" → next action: "Review and sign documents"), suggest it. Format contract: one line, ≤80 chars, leading `YYYY-MM-DD: ` only when that date is the trigger for the action; undated actions get no leading date; dates that are context rather than the trigger stay in the description.
 - **Limitation Deadline (column R)**: If blank and the email thread references a limitation period or incident date from which one can be calculated, flag it with the suggested date and reasoning.
 
 #### Implementation
@@ -126,8 +130,10 @@ Independent of the email scan, check the tracker for:
 
 1. **Limitation alerts**: Any matter where column R (Limitation Deadline) is within 6 months. Calculate days remaining. Matters within 90 days get flagged as critical.
 2. **Court deadline alerts**: Parse column S (Court Deadlines JSON) for any deadlines within 30 days.
-3. **Stale matters**: Any matter where column G (Last Activity) is more than 21 days ago. These may need a follow-up or status check.
+3. **Stale matters**: Any matter where column G (Last Activity) is more than 21 days ago. These may need a follow-up or status check. Before the staleness math, verify G is empty or a valid `YYYY-MM-DD` — if it contains prose, flag it in TRACKER ALERTS as a data-quality warning with a suggested fix and skip staleness math for that row rather than erroring.
 4. **Blank Next Action**: Any matter where column I (Next Action) is blank — these need a next step assigned.
+5. **Calendar reconciliation sweep**: For each OPEN matter with a dated Limitation Deadline (R) or dated Court Deadlines (S) entry in the future, check the Key Dates calendar for a matching event (by sync-key, or a title search on the `[file# ` prefix). Push any missing events via the calendar-sync skill. Bounded: future-dated items only, open matters only. Report: "Calendar sweep: N missing events pushed, M already covered."
+6. **Expected-but-missing email**: For court deadlines in column S within 14 days, if no court correspondence for that matter arrived in the past 7 days, flag: "deadline approaching, no court correspondence in 7 days — confirm notice with court office."
 
 ### Step 7 — Classify Unmatched Emails
 
@@ -185,7 +191,7 @@ Daily Triage — [date]
 URGENT
 ========================================
 [If any urgent items exist:]
-- [COURT] 2026-012 | Lee — Email from Ontario SCJ re: trial scheduling (received 9:41 AM) — OPEN AND READ
+- [COURT] 2026-012 | Lee — Email from the court re: trial scheduling (received 9:41 AM) — OPEN AND READ
 - [DEADLINE] 2026-031 | Acme — 7-day cure period expires tomorrow (2026-03-21)
 
 [If none:] Nothing urgent.
@@ -205,6 +211,8 @@ NEW ACTIVITY ON OPEN MATTERS
   - 1 new email:
     • From: client (bmurphy@example.com) — "Signed docs attached" (2:30 PM) [2 attachments]
   - Suggested action: Review signed documents
+
+[If a matter's Related Matters column is non-empty, add a line:] related: [file #s] — check both
 
 [If no matters have new email:] No new email activity on open matters.
 
@@ -304,7 +312,7 @@ After the lawyer responds to the decision list:
 4. **Court emails are always urgent.** Any email from a court or tribunal domain gets top priority regardless of content.
 5. **Be concise.** The triage should be scannable in under 60 seconds. One line per email, one line per alert. Details come later when the user asks to drill in.
 6. **Handle weekends and gaps.** If the user runs this on Monday morning, expand the window to cover the weekend. If they say "I haven't checked since Thursday," search from Thursday.
-7. **Don't duplicate the matter-tracker skill's job.** This skill identifies what needs attention and auto-fills missing contact/party fields. It does NOT write timeline entries, update Last Activity dates, or change matter status — those are the matter-tracker's job. The user runs "update matter [name]" for substantive tracker changes.
+7. **Don't duplicate the matter-tracker skill's job.** This skill identifies what needs attention and auto-fills missing contact/party fields. It does NOT write timeline entries, update Last Activity dates (beyond the Step 5 column G bump on matched inbound email), or change matter status — those are the matter-tracker's job. The user runs "update matter [name]" for substantive tracker changes.
 8. **Suggest but don't nag.** If stale matters or blank fields are found, mention them once. Don't repeat alerts the user has already seen in a previous triage.
 9. **Gmail unavailable fallback.** If Gmail MCP tools aren't available, skip the email scan entirely and just run the tracker review (Step 6 alerts only). Tell the user: "Gmail tools not available — showing tracker alerts only." Steps 2-5 and 7 are skipped because they depend on email data.
 10. **Classify, don't just list.** The Inbox Review section must categorize unmatched emails into A/B/C/D. Never present unmatched emails as a flat undifferentiated list. The categories exist to save the lawyer decision-making energy — use the thread content to classify accurately.

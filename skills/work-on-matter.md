@@ -83,6 +83,7 @@ Not a full update — no folder scan, no full timeline rebuild, no per-email tim
 3. Feed new messages into the triage logic below. Full bodies are already returned, so escalation is a no-op for Pass C results.
 4. After triage, update the "last seen" date for each thread that produced new messages (done as part of the brief refresh, not inline mid-pull).
 5. If the brief has no `## Tracked Threads` block yet, skip Pass C and note in Step 3 that thread tracking is bootstrapping. Pass A/B will seed the block on this load — and because the dedupe step (below) now calls `get_thread` on every Pass A/B thread, bootstrap loads see every message on the matter's main threads, not just the early ones the search returned.
+6. **Bootstrap catch-up.** If there is no `## Tracked Threads` block AND the tracker's Last Activity (column G) is more than 7 days old, the first pull is a catch-up: call `get_thread` on EVERY thread Pass A/B surface and read full bodies (snippets truncate). Label the refresh "Bootstrap catch-up from [Last Activity date]".
 
 **Pass A — Keyword pass.** Catches new threads and any message where matter-specific keywords appear in body, subject, or headers. Seeds Pass C's tracked-thread list.
 
@@ -118,7 +119,7 @@ Gmail's search response gives sender, date, subject, and a ~150-char snippet. Re
    - **2–7 days**: snippets-first; escalate generously when in doubt.
    - **>7 days, OR Gmail was unavailable last load, OR active litigation/transactional crunch (court date or closing within 14 days)**: default to full reads.
 5. **Per-message escalation triggers** — re-call `get_thread` with `messageFormat=FULL_CONTENT` (or, for Pass C, the bodies are already in hand) if the snippet or sender domain implies:
-   - Court / tribunal / regulator domain (`@ontario.ca`, LTB, HRTO, College, etc.). Always full-read; always surface even if administrative.
+   - Court / tribunal / regulator domain (any domain in `COURT_EMAIL_DOMAINS` in CLAUDE.md, plus tribunals and professional regulators). Always full-read; always surface even if administrative.
    - Opposing counsel substantive content (not a one-line ack).
    - Dollar figure, date, section/clause reference, or deadline word ("by", "no later than", "within", "before").
    - New role, name not in the brief, or unknown domain.
@@ -127,6 +128,7 @@ Gmail's search response gives sender, date, subject, and a ~150-char snippet. Re
    When in doubt, one full read. The cost is one tool call.
 6. **Skip the full read** for scheduling acks, one-line confirms, automated receipts, forwarded marketing.
 7. **For each message processed**, extract: sender, date/time, what changed. Court / tribunal emails are always reported even if administrative.
+8. **Call budget and rate limits — keep the pull bounded.** Pass C's known-thread refresh runs over every tracked thread (those calls are cheap and essential — don't skip them). Bound the *expensive* work instead: soft-cap full-content (`FULL_CONTENT`) escalations at about **15 per load**; if more threads would qualify, do the court/tribunal and most-recent threads first, then note in Step 3 that the rest were left at snippet level. **If any Gmail call returns a rate-limit, throttle, or 429 error, stop calling Gmail for the rest of this load immediately** — do not retry in a loop and do not keep paginating. Orient from the brief plus whatever was already pulled, and surface the gap in Step 3 exactly like the "unavailable or rate-limited" case below. A partial pull the user is told about beats a stalled session or a silently missed message.
 
 **Brief refresh.** Classify each finding:
 
@@ -144,7 +146,7 @@ If ANY material, refresh the brief BEFORE Step 3:
 
 If all findings are informational, still update `## Tracked Threads` for thread movement (advances "last seen" so Pass C doesn't re-process). Brief save, no tracker write. Step 3 surfaces the items in "What's new".
 
-**If Gmail tools are unavailable:** Skip the pull. Note in Step 3 orientation: "Couldn't check Gmail — orienting from brief alone, which may be stale. Recommend running 'update matter [name]' if anything important might have come in." Never proceed silently.
+**If Gmail tools are unavailable or rate-limited:** Skip the pull (or stop it where a rate-limit error cut it short). Note in Step 3 orientation: "Couldn't fully check Gmail — orienting from the brief plus any threads already pulled, which may be stale or incomplete. Recommend running 'update matter [name]' once Gmail is responsive if anything important might have come in." Never proceed silently as if the brief is fresh.
 
 ### Step 3 — Orient and Summarize
 
@@ -159,7 +161,7 @@ Skeleton (omit blocks that don't apply):
 3. **Brief story** — three to six bullets from the live sections of `_matter-brief.md`. Pick what's actionable today, not what paints the most complete picture. If no brief, quote the tracker timeline.
 4. **Recent decisions** (if `_matter-decisions.md` exists) — last three to five entries, one line each (date + headline only); full log in the file.
 5. **Deadline alerts** — limitation within 6 months, court deadlines within 60 days, any explicit deadline in the next 14 days. One line each.
-6. **What's new from the email pull** — one line per email/thread, prioritized by urgency, [URGENT] tag on court emails or sub-7-day deadlines. Material → "Brief refreshed from email pull. Material updates merged in:". Informational only → "Informational only (brief unchanged):". Nothing → "No new email activity in the past [N] days." Gmail unavailable → use the fallback line above.
+6. **What's new from the email pull** — one line per email/thread, prioritized by urgency, [URGENT] tag on court emails or sub-7-day deadlines. Material → "Brief refreshed from email pull. Material updates merged in:". Informational only → "Informational only (brief unchanged):". Nothing → "No new email activity in the past [N] days." Gmail unavailable, rate-limited, or only partially pulled → use the fallback line above and name which threads were left unread.
 
 **If the orientation exceeds ~25 lines including blanks, you're summarizing, not orienting. Cut.**
 
@@ -213,6 +215,8 @@ Misplacing content between files is the single failure mode that destroys instit
 
 #### Drafting Disciplines
 
+**PDF output.** When converting a letter or document to PDF via LibreOffice (e.g., a letterhead .docx for the client or opposing counsel), force the "Page Only" initial view so the file does not open with an empty bookmarks pane. Use `--convert-to 'pdf:writer_pdf_Export:{"InitialView":{"type":"long","value":"0"}}'` rather than a plain `--convert-to pdf`. A plain export leaves the PDF flagged `PageMode /UseOutlines`, which makes some viewers open a blank "Bookmarks" sidebar and looks unpolished on a document going out to a client or the other side.
+
 **Source-First Drafting.** Substantive legal drafting (redlines, demand letters, opinion letters, pleadings, closing docs) starts from the source document on disk, not from the brief or memory. Briefs orient; they do not authorize. When redlining a counterparty's draft, build the baseline from the counterparty's file, not a summary. Dates, dollars, section numbers, party names, addresses, quoted text — all come from a fresh read of the source. If the source isn't on disk, stop and request it. Save it to the matter folder. Then draft.
 
 **Citation Discipline.** Before any of these appear in client-facing output (emails, letters, opinions, redlines, advice memos, tracker Timeline entries):
@@ -223,6 +227,14 @@ Misplacing content between files is the single failure mode that destroys instit
 - Quoted or paraphrased clause text
 
 …open the source and confirm. Do this even when confident — confidence is often what produces the error. If the source isn't available, don't cite from memory. Flag the gap and either request the document or frame the advice without the citation.
+
+**Case-Law Citation Discipline.** Before any case, statute-as-applied, or judicial authority is cited or characterized in any output — client-facing or internal (advice memos, briefs, facta, demand letters, opinion letters, and the matter brief itself) — its actual text must be in hand for this task. One way or another, get it:
+
+- **If it's already provided**, use that — full opinion or the relevant passages, whether on disk in the matter folder, attached, or supplied earlier in the conversation.
+- **If it isn't provided, fetch it before citing.** Use a connected case-law tool or MCP (e.g., CourtListener) if one is available; otherwise a web fetch of the authoritative court/reporter source, or ask the lawyer for the PDF. Save anything fetched into the matter folder so the next session has it.
+- **Never cite or characterize a case from memory, a headnote or digest, a reporter citation alone, or a search-result snippet.** Those help you decide what to fetch; they do not substitute for the text. A confidently remembered holding is exactly what produces a miscite.
+- **Ground the proposition in the fetched text** — pin it to a specific passage (a short verbatim quote or a paragraph/pincite), not to the case in the abstract.
+- **If the text genuinely can't be obtained, don't cite the case.** Flag the gap and either request it or frame the point without the authority — same rule as the document Citation Discipline above.
 
 **Prior-Matter Fact Discipline.** Before any categorical statement about the firm's prior involvement (or non-involvement) with a person — "you've never been retained by this person", "we never sent a letter for them" — check ALL THREE:
 
@@ -304,6 +316,10 @@ Current-state snapshot. Tracker timeline holds historical record. Decisions log 
 
 **Reasoning still belongs in `_matter-decisions.md`.** If a brief Risk or Position runs more than three or four lines because it includes reasoning, split it: short summary stays in the brief with "full reasoning in _matter-decisions.md"; full reasoning goes in the decisions log entry of the same date.
 
+**Core skeleton is mandatory, in this order:** Matter Summary → Current Stage → Roles → Risks & Issues Flagged → Positions Taken / Advice Given → Open Items → Last Updated. The heading MUST be `# [Client Name] — [File #]` — briefs have turned up in the wild with no File # anywhere. Matter-specific sections (Key Terms, chronology, etc.) go AFTER the core sections. Directly under the heading sits a 3-line status bar (see Format below): ACTIVE DEADLINE (next dated deadline or "none"), LAST ACTION (date + one line), AWAITING (who owes what). **Refresh the status bar on every save.**
+
+**Section-level as-of dates.** The Roles, Risks & Issues Flagged, Positions Taken, and Open Items headings carry `[last update: YYYY-MM-DD]` on the heading line; update it whenever that section's content changes.
+
 **Format:**
 
 ```markdown
@@ -311,23 +327,30 @@ Current-state snapshot. Tracker timeline holds historical record. Decisions log 
 
 # [Client Name] — [File #]
 
+ACTIVE DEADLINE: [next dated deadline, or "none"]
+LAST ACTION: [YYYY-MM-DD — one line]
+AWAITING: [who owes what]
+
 ## Matter Summary
 [2-3 sentences: what this is, who the parties are, what stage]
 
-## Roles
+## Current Stage
+[One line: where the matter sits procedurally]
+
+## Roles [last update: YYYY-MM-DD]
 - Name (role) — source: [email date / doc filename + page / tracker col X]
+
+## Risks & Issues Flagged [last update: YYYY-MM-DD]
+- [Concise bullets]
+
+## Positions Taken / Advice Given [last update: YYYY-MM-DD]
+- [Current state, not historical reasoning]
+
+## Open Items [last update: YYYY-MM-DD]
+- [Unresolved, pending, or needs follow-up]
 
 ## Key Terms / Provisions
 [Transactional only — price, term, material conditions, unusual clauses]
-
-## Risks & Issues Flagged
-- [Concise bullets]
-
-## Positions Taken / Advice Given
-- [Current state, not historical reasoning]
-
-## Open Items
-- [Unresolved, pending, or needs follow-up]
 
 ## Tracked Threads
 - [Gmail thread ID] — "[short subject label]" — last seen YYYY-MM-DD
@@ -356,17 +379,22 @@ Use sparingly but honestly. An untagged claim is a guarantee that it came from a
 
 #### Decisions Log Format (`_matter-decisions.md`)
 
-The file's strategic memory. Capture decisions whose REASONING you'd want a future session to know.
+The file's strategic memory. Capture decisions whose REASONING you'd want a future session to know. This is the contemporaneous record that proves diligence later.
 
 **Append-only. No cap.** Never edit, reorder, or remove. If a decision is reversed, append the reversal as a new dated entry.
+
+**Every entry is tagged and reasoned.** Start each entry with `[Decision]`, `[Interim]`, or `[Blocker]`, then 1–2 sentences of reasoning plus alternatives considered/rejected — not implementation narration.
+
+- Good: `- 2026-04-22 — [Decision] Declined Quikserve co-rep agreement. Reason: indemnity creates direct conflict; considered limited-scope co-rep, rejected — conflict not waivable.`
+- Bad: `- 2026-04-22 — Reviewed co-rep agreement and emailed Quikserve counsel.` (re-hash of what was done; no decision, no reasoning)
 
 ```markdown
 > PRIVILEGED & CONFIDENTIAL — Solicitor-Client Privilege / Work Product
 
 # [Client Name] — [File #] — Decisions Log
 
-- 2026-04-22 — Declined Quikserve co-rep agreement. Reason: indemnity creates direct conflict between sublandlord and subtenant.
-- 2026-04-25 — Recommended $225/hr full / half during training (vs. Iullia's $250/hr ask). Reason: bridges her hospitalist anchor without conceding the partnership-stage frame.
+- 2026-04-22 — [Decision] Declined Quikserve co-rep agreement. Reason: indemnity creates direct conflict between sublandlord and subtenant; considered limited-scope co-rep, rejected as unwaivable.
+- 2026-04-25 — [Decision] Recommended $225/hr full / half during training (vs. Iullia's $250/hr ask). Reason: bridges her hospitalist anchor without conceding the partnership-stage frame.
 ```
 
 Routine document review and email drafting don't warrant entries — those go in the tracker timeline.
@@ -387,6 +415,10 @@ File-specific operational rules. Loaded at the top of every session, treated as 
 ```
 
 Only entries that bind future sessions belong here. One-off instructions don't.
+
+#### Counterparty Notes (`_counterparty-notes.md`)
+
+Practice-level file in the Open Files root (beside the tracker), not per-matter. Records patterns about recurring non-clients — opposing counsel, examiners, adjusters, clerks. Per entry: name, role, matters seen, responsiveness, preferred channel, tactics observed. Append or update when a matter concludes or a clear pattern emerges. At session start (Steps 1–2), if the matter's opposing counsel or a counterparty appears in this file, surface the entry in the Step 3 orientation.
 
 #### Universal Save Procedure
 
@@ -411,7 +443,7 @@ Three targeted cell updates on the matter's row:
 2. **Timeline (column J)**: append `YYYY-MM-DD -- [brief description]`. Never overwrite prior entries.
 3. **Next Action (column I)**: update only if changed.
 
-**Lock check first.** If `~$matter-tracker.xlsx` exists beside the tracker, it is likely open in Excel — warn the user and wait before writing (same rule as the matter-tracker skill; a write against an open workbook can fail or corrupt it). **Then backup.** Copy `matter-tracker.xlsx` to `backups/matter-tracker-backup-YYYY-MM-DD.xlsx`. After write, re-open with openpyxl to confirm clean load. Never auto-delete older backups.
+**Lock check first.** If `~$matter-tracker.xlsx` exists beside the tracker, it is likely open in Excel — warn the user and wait before writing (same rule as the matter-tracker skill; a write against an open workbook can fail or corrupt it). **Then backup.** Copy `matter-tracker.xlsx` to `backups/matter-tracker-backup-YYYY-MM-DD.xlsx`. After write, re-open with openpyxl to confirm clean load, then run `python3 scripts/validate_tracker.py <tracker> <latest backup>` and surface any FAIL to the lawyer before reporting success. Never auto-delete older backups.
 
 Use xlsx skill's openpyxl approach. Keep the row reference from Step 1.
 
@@ -431,7 +463,7 @@ After the tracker write:
 
 **Tell the user** briefly when a calendar change landed: "Calendar updated: follow-up on Apr 22." Silent changes erode trust.
 
-If calendar-sync or Calendar MCP unavailable, skip and note once.
+If calendar-sync or Calendar MCP unavailable, skip and note once. On any sync failure, ALSO append to the brief's Open Items: `[CALENDAR SYNC FAILED YYYY-MM-DD — "<event>" NOT on Key Dates; retry or add manually]`. The note-once rule resets each session — if sync is still failing in a new session, report it again.
 
 #### What to Tell the User After Saving
 
@@ -440,7 +472,7 @@ After the **first** save in a session, name what was saved: "Saved: brief, decis
 ## Important Rules
 
 1. **Save inline, never later.** Task is not complete until matter file(s) AND tracker are updated in the same response.
-2. **Step 2.5 always runs.** Three passes (C → A → B), past 7 days minimum, 30 days max. Read mode scales with brief freshness; the search itself doesn't. Update `## Tracked Threads` on every refresh or Pass C silently regresses.
+2. **Step 2.5 always runs.** Three passes (C → A → B), past 7 days minimum, 30 days max. Read mode scales with brief freshness; the search itself doesn't. Update `## Tracked Threads` on every refresh or Pass C silently regresses. If Gmail errors or rate-limits, stop calling it, orient from what's already in hand, and say so — never present a partial pull as complete.
 3. **Three files, three lifecycles.** Brief = snapshot, demote don't delete. Decisions and comms = append-only, never edited.
 4. **Source-first for everything that leaves the firm, AND for any categorical claim about prior firm involvement.** Tracker + filesystem + Gmail check before any "we never" assertion.
 5. **Backup, mtime-check, write, verify — every save.** Same for the tracker.
