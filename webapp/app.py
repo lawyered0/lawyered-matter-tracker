@@ -20,6 +20,28 @@ MATTER_FOLDER_BASE = os.environ.get(
 )
 
 
+def atomic_save(wb):
+    """Save the workbook crash-safely.
+
+    openpyxl's ``wb.save(path)`` writes in place, so if the process is
+    interrupted mid-save (Ctrl-C, crash, laptop sleep) the tracker can be
+    left half-written and unreadable — and the most recent backup is then
+    the only copy. Instead, save to a temp file in the same directory and
+    ``os.replace()`` it over the target: the rename is atomic, so readers
+    only ever see the old file or the fully-written new one, never a
+    truncated one.
+    """
+    tmp_path = f"{XLSX_PATH}.{os.getpid()}.tmp"
+    try:
+        wb.save(tmp_path)
+        os.replace(tmp_path, XLSX_PATH)
+    finally:
+        # os.replace consumed tmp_path on success; only present if save
+        # or replace failed partway through.
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+
+
 def backup_spreadsheet():
     """Create a timestamped backup before any write operation."""
     os.makedirs(BACKUP_DIR, exist_ok=True)
@@ -52,7 +74,7 @@ def ensure_column_exists(column_name):
             modified = True
     if modified:
         backup_spreadsheet()
-        wb.save(XLSX_PATH)
+        atomic_save(wb)
     wb.close()
 
 
@@ -323,7 +345,7 @@ def write_cells(file_no, updates):
                 if str(ws.cell(row=row, column=file_col).value) == str(file_no):
                     for col_name, col_idx in col_map.items():
                         ws.cell(row=row, column=col_idx).value = updates[col_name]
-                    wb.save(XLSX_PATH)
+                    atomic_save(wb)
                     wb.close()
                     return True
     except Exception as e:
@@ -356,7 +378,7 @@ def add_timeline_entry(file_no, entry_date, entry_text):
                     ws.cell(row=row, column=timeline_col).value = str(current) + f"\n{entry_date}: {entry_text}"
                     if activity_col:
                         ws.cell(row=row, column=activity_col).value = entry_date
-                    wb.save(XLSX_PATH)
+                    atomic_save(wb)
                     wb.close()
                     return True
     except Exception as e:
@@ -606,7 +628,7 @@ def append_matter_row(data):
         for col_name, val in col_vals.items():
             if col_name in headers and val:
                 ws.cell(row=new_row, column=headers.index(col_name) + 1).value = val
-        wb.save(XLSX_PATH)
+        atomic_save(wb)
         wb.close()
         return file_no
     except Exception as e:
@@ -658,7 +680,7 @@ def move_matter_between_sheets(file_no, from_sheet, to_sheet, updates):
                 dst.cell(row=dst_row, column=dst_headers.index(col_name) + 1).value = val
         # Delete source row
         src.delete_rows(src_row)
-        wb.save(XLSX_PATH)
+        atomic_save(wb)
         wb.close()
         return True
     except Exception as e:
