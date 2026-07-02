@@ -50,6 +50,8 @@ If column R is a date before today, the limitation has expired. This is the high
 
 Parse column S as JSON. For each entry `{"date": "...", "description": "...", "source": "..."}`, if `date` is before today, that deadline is overdue. Entries can be independently resolved. Remove individual expired entries, not the whole array.
 
+**Anchored-relative entries.** Entries with an `anchor` field and no `date` (the representation for "30 days before trial"-type deadlines; legacy `"TBD-*"` date strings get the same treatment) have no concrete date yet. Surface them EVERY sweep as "unresolved relative deadline: anchor not yet set". When the lawyer provides the anchor date, compute the concrete date per your jurisdiction's deadline rules (roll weekends and court holidays as required), replace the entry with a dated one, and push to calendar via calendar-sync.
+
 ## Workflow
 
 ### Step 1: Load Tracker and Detect
@@ -220,22 +222,22 @@ Once the lawyer confirms:
 1. **Backup the tracker once** (single timestamped copy in `backups/` beside the tracker). Do not back up per-item. One backup for the whole batch.
 2. **Check for lock file again** right before opening. If it appeared, abort and tell the lawyer.
 3. Open the workbook once (`openpyxl.load_workbook`), apply all approved changes in memory, save once. Rationale: the batched write is atomic. Either every approved change lands or none do. Per-item writes would leave the tracker in an inconsistent state if one failed mid-batch.
-4. For each approved decision:
+4. For each approved decision. **Last Activity rule for ALL resolve actions: set column G to max(current G, timeline-entry event date). Never a future date.**
 
    **`action: "resolve"` on `type: "court_deadline"`:**
    - Parse column S JSON, remove the entry at the given index, serialize back. If the array is now empty, write empty string (not `"[]"`).
    - Append to column J (Timeline): `YYYY-MM-DD: [timeline_entry]`, using the `date` from the decision (the actual event date, not today).
-   - Update column G (Last Activity) to today if the timeline entry date is later than current Last Activity.
+   - Update column G (Last Activity) per the rule above.
 
    **`action: "resolve"` on `type: "next_action"`:**
    - Write the new Next Action string (from `new_next_action`) to column I. If the user indicated there's no new next action, write the next procedural step in prose (e.g., "Awaiting client instructions re: next steps").
    - Append timeline entry.
-   - Update Last Activity to today.
+   - Update Last Activity per the rule above.
 
    **`action: "resolve"` on `type: "limitation"` with subtype "claim_filed":**
    - Clear columns P (Discovery Date), Q (Limitation Statute), R (Limitation Deadline). Set all to empty.
    - Append timeline entry: `YYYY-MM-DD: Claim filed; limitation period closed.` (use issuance date from evidence).
-   - Update Last Activity.
+   - Update Last Activity per the rule above.
 
    **`action: "unresolved"` or `"skip"`:** no tracker write for this item.
 
@@ -266,8 +268,8 @@ LIMITATION EXPIRED (HIGHEST PRIORITY):
     Matter: Constructive dismissal claim
     Limitation expired: 2026-04-05 (14 days ago)
     Last activity: 2026-03-01 (49 days ago)
-    Statute: limitations_act_basic
-    > Suggested action: URGENT. Confirm whether claim was filed. If not, assess malpractice exposure and notify insurer if applicable. Do NOT file out of time without a s. 5(2) Limitations Act analysis.
+    Statute: general_statute
+    > Suggested action: URGENT. Confirm whether claim was filed. If not, assess malpractice exposure and notify insurer if applicable. Do NOT file out of time without a discoverability analysis under your jurisdiction's limitation statute.
 
 COURT DEADLINES PAST DATE:
   * File #2026-019: Lee, N.
@@ -288,10 +290,12 @@ STALE BUT NOT OVERDUE:
 ===============================================================
 ```
 
+**Recurrence escalation.** Persist sweep results to `backups/overdue-triage-history.json` beside the tracker (same folder as the batch backup): for each unresolved item, append `file_no`, item text, and sweep date. On each sweep, cross-check the new unresolved list against this history. Items flagged unresolved in 2+ prior sweeps get an escalation line in the red-flag report instead of a plain repeat: "flagged N times since [date]: pattern suggests a decision blocker. Recommend call client / close matter / fix the tracker entry."
+
 **Suggested action writing rules:**
 - Be specific. "Follow up" is not a suggestion. Name who to contact, what to check, and what the next procedural step is.
 - For limitation expiries, always flag malpractice exposure analysis. Never minimize.
-- For service deadlines, always mention the rule 3.02 relief-from-consequences option if the deadline was missed.
+- For service deadlines, always mention any relief-from-consequences option your rules of procedure provide if the deadline was missed.
 - For court deadlines tied to endorsements, suggest checking the order text to see if the court attached consequences (e.g., "failure to serve results in dismissal").
 - Match the lawyer's preference: no em dashes, no sugar-coating.
 
@@ -320,8 +324,8 @@ A concise reference for writing the red-flag list. Use these as templates. Custo
 
 | Scenario | Template suggested action |
 |----------|--------------------------|
-| Limitation expired, no claim filed | "URGENT: Limitation expired [N] days ago. Confirm non-filing. If confirmed, conduct s. 5 Limitations Act discovery analysis for any late-filing argument. Notify insurer if exposure exists. Consider s. 21 discoverability defence in the alternative." |
-| Court deadline missed (service) | "Confirm service status. If not served, serve immediately. Assess whether rule 3.02 relief from consequences is needed. Notify opposing counsel of late service and confirm no prejudice." |
+| Limitation expired, no claim filed | "URGENT: Limitation expired [N] days ago. Confirm non-filing. If confirmed, conduct a discoverability analysis under your jurisdiction's limitation statute for any late-filing argument. Notify insurer if exposure exists." |
+| Court deadline missed (service) | "Confirm service status. If not served, serve immediately. Assess whether relief from the missed deadline is available under your rules of procedure. Notify opposing counsel of late service and confirm no prejudice." |
 | Court deadline missed (filing) | "Confirm filing status. If not filed, file now with an explanation letter to the court. Check for any default proceedings initiated by opposing counsel." |
 | Court deadline missed (endorsement compliance) | "Check the endorsement text for automatic consequences. If the endorsement attached consequences (e.g., dismissal, striking of claim), assess rule 37.14 motion to set aside. Notify client immediately." |
 | Next Action: settlement conference passed | "Log conference outcome (result, positions taken, next steps). If ordered to a further step, add to court deadlines. If settled, proceed to close." |

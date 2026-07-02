@@ -24,7 +24,7 @@ If the user ever re-creates the calendar, swap the id here.
 
 - **Google Calendar MCP tools**: `list_events`, `create_event`, `update_event`, `delete_event`, `get_event`. All calls pass `calendarId=KEY_DATES_CALENDAR_ID`.
 - **Read access to the tracker row** being synced — the caller passes the row data.
-- If the Calendar MCP is unavailable, skip silently and tell the caller once: "Calendar MCP not connected — deadlines not pushed to Key Dates." Do not block the tracker write.
+- If the Calendar MCP is unavailable, skip the push and tell the caller once (per session): "Calendar MCP not connected — deadlines not pushed to Key Dates." Do not block the tracker write.
 
 ## Deadline Categories
 
@@ -75,8 +75,8 @@ Every event uses the same structure.
 
 Examples:
 - `[2026-070 | Davis] Court — Defence deadline (TSCC 1654)`
-- `[2026-070 | Davis] LIMITATION — 2-yr Limitations Act expiry`
-- `[2026-070 | Davis] Follow-up — Call Small Claims trial coordinator`
+- `[2026-070 | Davis] LIMITATION — 2-yr limitation expiry`
+- `[2026-070 | Davis] Follow-up — Call the trial coordinator`
 - `[2026-070 | Davis] 3P Follow-up — Ping Nina Bauer re defence`
 
 ### Time
@@ -97,7 +97,7 @@ Deadline: {YYYY-MM-DD}
 
 {full deadline description — one paragraph, no line breaks needed}
 
-Source: {e.g., "March 12 endorsement", "Rule 1.03 — 30 days before trial", "Limitations Act, s.4", "Tracker Next Action"}
+Source: {e.g., "March 12 endorsement", "scheduling order — 30 days before trial", "limitation statute", "Tracker Next Action"}
 Matter folder: {column T value or "not set"}
 
 Last synced: {ISO timestamp}
@@ -146,7 +146,7 @@ Full sweep for one matter. Called by `matter-tracker` after every NEW / UPDATE w
 
 1. Build `desired` — the set of (category, slug, date, short_description) that should exist for this row:
    - If column R (Limitation Deadline) is set and Status = Open: add `(LIM, "expiry", R_date, f"{Q_statute_label} expiry")`.
-   - For each entry in column S (Court Deadlines JSON) where date > today - 1d: add `(COURT, slug_of(entry.description), entry.date, entry.description)`.
+   - For each entry in column S (Court Deadlines JSON) where date > today - 1d: add `(COURT, slug_of(entry.description), entry.date, entry.description)`. Entries with an `anchor` and no `date` are skipped with a report line (see Reconciliation Rules of Thumb).
    - If column I (Next Action) is a dated entry (`YYYY-MM-DD: ...`) AND the date is not already covered by a COURT or LIM entry above AND date > today - 1d: add `(FUP, "nextaction", I_date, I_description)`.
    - Third-party follow-ups (`TFUP`) are only added via explicit `upsert_deadline` calls, not via reconcile — they come from ad-hoc work-on-matter prompts, not from tracker columns.
 2. Pull `existing` — all events with title starting `[{file#} |` on Key Dates.
@@ -181,6 +181,7 @@ When the user resolves an item, call `cancel_deadline(file#, category, slug)`.
 ## Reconciliation Rules of Thumb
 
 - **Never push a deadline in the past.** Skip any entry where date ≤ today.
+- **Anchored entries are not syncable.** Column S entries with an `anchor` field and no `date` have no concrete date yet — skip them, but always report: "N relative deadlines awaiting anchor dates — not on calendar." Never skip them silently.
 - **One LIM event per file.** If the limitation deadline changes, `upsert_deadline` updates in place.
 - **One FUP event per file.** Column I is a single next-action field; the calendar mirrors that. If the user changes Next Action from "Call coordinator" to "Serve Form 1B", the old FUP event is updated in place.
 - **Multiple COURT events per file.** Each entry in column S JSON gets its own event, slugged by description.
@@ -190,12 +191,17 @@ When the user resolves an item, call `cancel_deadline(file#, category, slug)`.
 ## Failure Handling
 
 - If any Calendar MCP call errors, log the error to the conversation and continue. Do not block the tracker write. Example: "Calendar sync failed for 2026-070 Davis: rate limited. The tracker is updated; run 'resync calendar' later."
+- **Never fail silently.** The calling skill must surface the failure to the user and record it in the matter brief's Open Items so the missed push isn't lost. "Note once" applies per session, not globally — a new session notes the failure again.
 - If the caller passes a malformed date (not `YYYY-MM-DD`), skip that entry and flag it to the user.
 - If the caller is missing required fields (file#, category, date, short_description), ask the caller to retry — do not guess.
 
 ## Manual Resync
 
 If events drift out of sync (MCP was down, user edited calendar directly, etc.), the user can say "resync calendar for [Name]" or "resync all calendar events". On the former, load that one row and call `reconcile`. On the latter, iterate every open matter and call `reconcile` for each. For full resync on many files, pace the calls — Google Calendar rate limits around 600 writes/minute.
+
+## Automatic Resync
+
+daily-triage performs a calendar sweep each run — open matters with future-dated deadlines in columns R or S that have no matching Key Dates event get pushed via this skill — so tracker↔calendar drift self-heals within a day. Manual "resync calendar for [name]" remains available for immediate fixes.
 
 ## What This Skill Does NOT Do
 

@@ -38,7 +38,7 @@ Both sheets use these columns:
 
 | Column | Header | Format | Notes |
 |--------|--------|--------|-------|
-| A | File # | Text (e.g. "2026-001") | Auto-assigned: YYYY-NNN. Next number = highest NNN across **both** the Open Matters AND Closed Matters sheets, + 1. A closed matter keeps its number forever — never reuse it. (Scanning only Open Matters reuses a number when a matter is closed shortly before a new one is opened.) |
+| A | File # | Text (e.g. "2026-001") | Auto-assigned: YYYY-NNN. Next number = highest NNN across **both** the Open Matters AND Closed Matters sheets, + 1. A closed matter keeps its number forever — never reuse it. (Scanning only Open Matters caused duplicate 2026-231: a matter closed the same day freed its number on the Open sheet and a new matter took it.) |
 | B | Client Name | Text | Primary client name. **Standard format: `Entity Name (Principal Name)`** — e.g. "Acme Group Inc. (Blake Murphy)". For individual clients with no entity, just use their name. For individuals acting through a numbered company, lead with the entity: "10014056 Holdings LLC (Jane D)". If multiple key individuals exist (e.g. two directors), comma-separate them inside the brackets: "ABC Real Estate Solutions Inc. (Bob Adams, Carol Chen)". **Never use slash format** (e.g. "Name / Corp") — always use the brackets format for consistency. This ensures the conflict check catches both the entity and the individual(s) behind it. |
 | C | Matter Description | Text (wrap text) | Brief description of the engagement |
 | D | Status | Text | "Open" or "Closed" |
@@ -59,7 +59,7 @@ Both sheets use these columns:
 | S | Court Deadlines | Text (JSON array) | Court-ordered deadlines stored as JSON. Each entry: {"date":"YYYY-MM-DD","description":"what's due","source":"endorsement or order reference"}. Only for bespoke deadlines from endorsements/orders — NOT routine rule-based deadlines like "defence due in 20 days". |
 | T | Matter Folder | Text | Subfolder name (NOT a full path) within the Open Files directory (e.g. "Smith, J." — not "/Users/.../Smith, J."). Used to resolve the matter folder path on disk. When creating a new matter, search the Open Files directory for a subfolder matching the client — try ALL of: the individual's last name, first name, full name, "Last, First" format, the company/entity name, and common abbreviations. Client folders are often named after the entity rather than the person (e.g. "Summit Industries" not "Heaps, Toby"). Cast a wide net: list all subfolders and grep for each search term separately. Write just the subfolder name. Leave blank if no match. |
 | U | Other Parties / Related Persons | Text (wrap text) | All non-client, non-opposing parties involved in the matter: co-plaintiffs, co-defendants, witnesses, guarantors, landlords, agents, process servers, adjusters, corporate officers, and anyone else whose name should trigger a conflict check. Comma-separated. Include individuals behind corporate opposing parties if known (e.g. if opposing party is "Acme Corp", and the director is "Jane Doe", list "Jane Doe" here). This column is searched during conflict checks to catch indirect conflicts. |
-| V | Matter Type | Text | Free-text classification of the matter (e.g. "Litigation", "Solicitor", "Transactional", "Advisory", "Small Claims", "Demand Letter"). No fixed enum — keep values consistent with prior rows for filterability, but allow new categories as the practice evolves. Used for sorting and filtering matters in reports; not client-facing. |
+| V | Matter Type | Text | Free-text classification of the matter (e.g. "Litigation", "Solicitor", "Transactional", "Advisory", "Small Claims", "Demand Letter"). No fixed enum — keep values consistent with prior rows for filterability, but allow new categories as the practice evolves. Used for sorting and filtering matters in reports; not client-facing. **Soft enum**: before writing a value, list the existing unique values from both sheets; if the new value is a near-duplicate of an existing one (e.g. "Small Claims" vs "SCC" vs "Litigation - Small Claims"), propose the existing value and require explicit confirmation to create a variant. Reject placeholder values like "Test". |
 
 ### Formatting
 
@@ -96,6 +96,28 @@ for col in range(1, 23):  # A through V
 ```
 
 **Why this matters**: If wrap_text or borders differ between rows, the tracker displays inconsistently in Excel/Sheets. Always inspect the last existing data row's formatting before writing a new one.
+
+### Write-Time Validation
+
+Check before every row write:
+
+1. **Date columns E, F, G, P, R**: `YYYY-MM-DD` only — never a datetime ("2025-09-01 00:00:00" has appeared in the wild) and never prose (a Last Activity cell was once found holding action text). Prose belongs in Next Action or the Timeline.
+2. **Next Action (I)**: ONE line, ≤80 chars. Leading "YYYY-MM-DD: " ONLY when that date is the actual trigger. Multi-item blocker lists go in the brief's Open Items, not the tracker.
+3. **Court Deadlines (S)**: every "date" field must be a real YYYY-MM-DD date. Placeholder values like "TBD-30" are rejected — use the anchored-entry format in the Court Deadlines Column (S) section instead.
+
+### Column Ownership
+
+Primary writer(s) and format contract per written column — other skills read, they don't write:
+
+| Col | Primary writer(s) | Contract |
+|-----|-------------------|----------|
+| A File # | matter-tracker | Immutable once assigned |
+| G Last Activity | matter-tracker, work-on-matter, overdue-triage | Date-only; set to max(current, event date); never a future date |
+| I Next Action | matter-tracker, work-on-matter, daily-triage (with the lawyer approval) | Single line per Next Action Format |
+| J Timeline | matter-tracker, work-on-matter | Append-only; event-dated entries |
+| M / U | daily-triage (auto-fill when blank), matter-tracker | Per column definitions |
+| P/Q/R Limitation | matter-tracker (with the lawyer's approval) | R never cleared without claim-filed confirmation |
+| S Court Deadlines | matter-tracker, overdue-triage | JSON contract per Court Deadlines Column (S), incl. anchored entries |
 
 ## Next Action Format
 
@@ -162,10 +184,10 @@ Example:
 
 Columns K and L are simple compliance checkmarks set on every new matter:
 
-- **K — Client ID Verified**: Default to "Pending" on file opening. ID verification is performed via **Veriff** (the lawyer sends the client the Veriff link manually by email, outside Cowork). Set to "✓" only once the client has completed Veriff and the lawyer confirms it. The checkmark should reflect a verification that actually happened (LSO By-Law 7.1 client identification and verification), not a file-open default. If verification is still outstanding when the file is opened, "Pending" is the accurate state.
+- **K — Client ID Verified**: Default to "Pending" on file opening. ID verification is performed via your ID-verification provider (see ID_VERIFICATION_SERVICE in CLAUDE.md; the lawyer sends the client the verification link manually by email). Set to "✓" only once the client has completed verification and the lawyer confirms it. The checkmark should reflect a verification that actually happened (per your law society's client identification and verification rules), not a file-open default. If verification is still outstanding when the file is opened, "Pending" is the accurate state.
 - **L — Conflict Check Done**: Set to "✓" on file opening. Confirms a conflicts check was completed before the file was opened. Default to "✓" for all new matters.
 
-Column L (Conflict Check Done) is set to "✓" automatically when a new matter is created, since the conflicts check is run as part of opening the file, and is carried over on close. Column K (Client ID Verified) defaults to "Pending" and flips to "✓" only when Veriff is actually confirmed, so it is not auto-checked. Neither column requires Gmail searches.
+Column L (Conflict Check Done) is set to "✓" automatically when a new matter is created, since the conflicts check is run as part of opening the file, and is carried over on close. Column K (Client ID Verified) defaults to "Pending" and flips to "✓" only when verification is actually confirmed, so it is not auto-checked. Neither column requires Gmail searches.
 
 ## Client Contact Columns (M–O)
 
@@ -184,11 +206,11 @@ These columns should be populated for every matter where the information is find
 Columns P, Q, and R track limitation periods. **These are ONLY populated when there is a live or potential claim.** Do NOT set these for transactional, advisory, or corporate matters where no cause of action exists.
 
 - **P — Discovery Date**: The date of discovery that triggers the limitation clock. This is a judgment call — flag if ambiguous and ask the user.
-- **Q — Limitation Statute**: One of: `limitations_act_basic` (2yr), `limitations_act_ultimate` (15yr), `cpa_2_year` (2yr), `employment_standards` (2yr), `human_rights` (1yr), `construction_act` (2yr), `insurance_act` (1yr), `municipal_liability` (10-day notice + 2yr), or `custom`. If none of the named statutes apply, use `custom` and ask the user to provide the deadline manually.
+- **Q — Limitation Statute**: One of the statute keys defined in `LIMITATION_STATUTES` in your CLAUDE.md (configured for your jurisdiction), or `custom`. If none of the configured statutes apply, use `custom` and ask the user to provide the deadline manually.
 
-  **Two presets carry traps — confirm with the user before relying on them, and surface the caveat in the confirmation message:**
-  - `insurance_act` (1yr) fits only specific claim types (e.g. auto property under s. 259.1). Most insurance claims are governed by the 2-year Limitations Act period, and SABS/LAT disputes run their own 2-year clock — for those, `limitations_act_basic` or `custom` is the right key. Ask which period applies; never default to 1 year just because the matter involves an insurer.
-  - `construction_act` (2yr) captures only the action limitation. The deadlines that actually kill construction files — 60-day lien preservation and 90-day perfection — are NOT generated by this preset. Track them explicitly in column S or column I so they reach the calendar.
+  **Presets can carry traps — confirm with the user before relying on them, and surface the caveat in the confirmation message:**
+  - Some statutes have short special periods that apply only to narrow claim types. Never default to the shorter period just because the subject matter superficially fits — ask which period applies.
+  - Some statutes generate procedural deadlines a simple period preset does NOT capture (e.g. lien preservation and perfection windows in construction matters). Track those explicitly in column S or column I so they reach the calendar.
 - **R — Limitation Deadline**: Auto-calculated from P + Q. If the statute is `custom`, the user enters the deadline manually.
 
 When creating a new matter that involves a claim (e.g. Small Claims, demand letter, employment dispute), **always ask the user about the discovery date and applicable limitation** if not obvious from the emails. Flag any limitation period that is within 6 months of expiry.
@@ -200,13 +222,21 @@ Column S stores court-ordered deadlines as a JSON array. Each entry has three fi
 ```json
 [
   {"date": "2026-03-25", "description": "Amend claim to add corporation", "source": "March 12 endorsement"},
-  {"date": "2026-04-27", "description": "Serve Form 1B on defendants", "source": "Rule 1.03 — 30 days before trial"}
+  {"date": "2026-04-27", "description": "Serve Form 1B on defendants", "source": "scheduling order — 30 days before trial"}
 ]
 ```
 
 **Only enter bespoke deadlines** from endorsements, orders, or case-specific requirements — NOT routine rule-based deadlines that the lawyer already knows (e.g. "defence due in 20 days", "disclosure 14 days before settlement conference"). The purpose of this column is to capture the one-off deadlines that come out of specific judicial endorsements and could be missed.
 
 When updating a matter, if a Gmail search or folder scan reveals a new court date, endorsement, or order with a deadline, add it to the JSON array and alert the user.
+
+**Anchored-relative deadlines.** A deadline defined relative to an unset anchor (e.g. "30 days before trial" with no trial date yet) must NOT be stored with a placeholder date string. Store it with NO "date" field:
+
+```json
+{"anchor": "trial date", "offset_days": -30, "description": "Serve Form 1B on defendants", "source": "scheduling order"}
+```
+
+When the anchor date is later confirmed, compute the real date per your jurisdiction's deadline rules (count the period, then roll weekends and court holidays as your rules require), replace the entry with a normal dated entry, and push it to the calendar. Overdue-triage surfaces unresolved anchored entries on each sweep.
 
 ## Other Parties / Related Persons Column (U)
 
@@ -224,6 +254,10 @@ Column U captures every person or entity involved in the matter who is NOT the c
 **Format**: Comma-separated names. Include role context where helpful: "Alex Brooks (co-plaintiff/witness), Dana Reyes (opposing counsel, Reyes Law)".
 
 **Why this matters**: The conflict check searches this column. If a future prospective client's name appears here, the user is alerted before opening a file that could create a conflict.
+
+## Related Matters Column
+
+A "Related Matters" column stores comma-separated File #s of sibling matters (create the header in the next free column if absent). When opening a matter for a client or dispute that already has open matters, populate the column both ways — on the new row AND each existing sibling row — and mirror it in a `## Related Matters` section of the brief with relative links to the sibling briefs.
 
 ## Core Research Procedure
 
@@ -260,8 +294,9 @@ Gmail provides the primary chronological backbone of the timeline — it capture
 6. Read email threads until the timeline is complete. **Use `get_thread` on each thread** — do not rely on snippets alone, as snippets truncate critical details like dates, times, locations, and court file numbers. Read every thread that could contain a timeline event. There is no cap on how many threads to read — the goal is a complete chronological record. If there are dozens of threads, read them all. For efficiency, prioritize court/scheduling emails first, then substantive correspondence, then administrative emails — but do not skip threads just because there are many.
 7. Extract: dates, key actions, parties involved, documents exchanged, deadlines, outcomes.
 8. **Extract client contact info**: On every Gmail pull, look for the client's email address (from the "From" header), phone number, and mailing address (from email signatures, body text, or attached documents). If found and columns M-O are blank, populate them.
-9. **Court and scheduling emails are highest priority.** When any email originates from a court address (e.g. @ontario.ca, @scj-csj.ca, any court clerk) or references a court file number, scheduling, or hearing date, **always read that message in full** and extract all dates, times, locations, and Zoom/video links. These must be captured verbatim in the Next Action field (with exact date and time) and in the Timeline. Never summarize or skip a court scheduling email.
+9. **Court and scheduling emails are highest priority.** When any email originates from a court address (any domain in `COURT_EMAIL_DOMAINS` in CLAUDE.md, or any court clerk) or references a court file number, scheduling, or hearing date, **always read that message in full** and extract all dates, times, locations, and Zoom/video links. These must be captured verbatim in the Next Action field (with exact date and time) and in the Timeline. Never summarize or skip a court scheduling email.
 10. Build the base timeline from Gmail results.
+11. **Rate limits and Gmail errors.** If any Gmail call returns a rate-limit, throttle, or 429 error, stop calling Gmail for the rest of this operation immediately — do not retry in a loop and do not keep paginating. Build the timeline from the threads already read plus the folder scan, and tell the user the Gmail pull was cut short by rate limiting and may be incomplete (same disclosure as the "Gmail unavailable" rule). Never present a rate-limited partial pull as a complete record.
 
 ### Step B — Client Folder Scan
 
@@ -384,7 +419,7 @@ The tracker only knows about matters that were entered into it. Files that preda
    - **If the matter is transactional/advisory**: leave columns P-R blank.
    - Leave Court Deadlines (S) blank unless folder files or emails reveal a specific court-ordered deadline.
    - **Matter Folder (T)**: Search the workspace directory for a subfolder matching the client. **All matching must be case-insensitive.** First, dump the full directory listing to a text file using `ls -1 > /tmp/dirlist.txt`, then grep against that file — this avoids shell issues with special characters (colons, ampersands, parentheses, etc.) in folder names. Try matching against ALL of these permutations of the client name: "First Last" (e.g. "wayne evans"), "Last, First" (e.g. "Taylor, Wayne"), "Last First" (no comma), just the last name, just the first name, and any company/entity name from the matter description or opposing party field. **Also search for the mother/father/third-party name if the matter is brought on someone else's behalf** (e.g. for "Reed v. Blake" brought by Patricia Moore on behalf of June Reed, search for "Moore", "Patricia", "Reed", and "June"). Folders are often named in lowercase or informal formats (e.g. "wayne evans" not "Taylor, Wayne"), or after the entity rather than the person (e.g. "Summit Industries" not "Heaps, Toby"), and frequently contain special characters like colons (e.g. "Patricia Moore : Reed"). Cast a wide net — grep each search term separately and case-insensitively against the text file listing. If found, write just the subfolder name exactly as it appears on disk. If not found, leave blank.
-8. Save the updated tracker to disk.
+8. Save the updated tracker to disk. Then run `python3 scripts/validate_tracker.py <tracker> <latest backup>` and surface any FAIL to the lawyer before reporting success.
 9. **Calendar sync**: Invoke the `calendar-sync` skill's `reconcile(new_row)` for this matter. This pushes any limitation date (column R), court deadlines (column S), and dated Next Action (column I) to the Key Dates calendar with the appropriate reminder schedules. Report back to the user: "Pushed N events to Key Dates." If calendar-sync is unavailable, skip this step and note it once — do not block the tracker write.
 
 ### 2. UPDATE MATTER
@@ -396,6 +431,8 @@ The tracker only knows about matters that were entered into it. Files that preda
 1. Extract the client name. If absent, ask.
 2. Load the tracker (see "Finding the Tracker"). Find matching row (case-insensitive partial match; if ambiguous, ask).
 3. **Run the Core Research Procedure** (folder scan + Gmail from Last Activity date onward).
+3.5. **Conflict re-check on newly discovered parties.** Every new party the pull surfaces (co-defendants, guarantors, principals behind entities, new opposing counsel) must be checked against columns B, C, H, and U on BOTH sheets (case-insensitive). Match as client (col B): stop and alert the lawyer of a potential conflict before proceeding. Match as opposing party (col H): note as repeat-litigant intel and continue. Any match in column U: surface for review. Then append the new parties to column U.
+3.6. **Limitation capture on claim emergence.** If Matter Type (col V) is Advisory, Transactional, or blank but the pull surfaces evidence of a claim (court filing, demand received or sent, breach event), ask the lawyer for the discovery date and limitation statute and populate columns P/Q/R per the Limitation Period Columns section. Flag if the deadline is within 6 months.
 4. Read the existing Timeline from the spreadsheet.
 5. Merge new events into the existing timeline in chronological order. Do not duplicate or remove existing entries.
 6. **Present the updated timeline to user for confirmation:**
@@ -420,8 +457,8 @@ The tracker only knows about matters that were entered into it. Files that preda
    - **Expired court deadlines — confirm before removing.** A passed date does not mean the obligation was satisfied; it may have been MISSED, which is exactly what most needs surfacing. For each column S entry whose date has passed, check the research pull for evidence it was satisfied (filing confirmation, email, endorsement). Evidence found: remove it and tell the user ("Cleared: 2026-02-15 — Amend claim — amended claim filed Feb 14"). No evidence: do NOT remove — flag it ("2026-02-15 — Amend claim: deadline passed, no evidence it was done. Was this handled?") and wait for the answer. Silent removal would also gut the overdue-triage skill, whose job is to investigate exactly these entries.
    - If the matter now involves a claim but limitation columns (P-R) are blank, flag this and ask the user about discovery date and statute
    - **If column T (Matter Folder) is blank**, attempt to populate it now using the folder resolution logic from the NEW MATTER workflow.
-8. Save the updated tracker to disk.
-9. **Write/refresh `_matter-brief.md`** in the matter folder (column T). If the brief exists, read it and update with current information. If it doesn't exist, create it. The brief is a current-state snapshot of the matter (soft warning at 250 lines, no hard cap — see "Matter Brief Format" below). This step happens automatically after saving the tracker — no need to ask the user for separate confirmation.
+8. Save the updated tracker to disk. Then run `python3 scripts/validate_tracker.py <tracker> <latest backup>` and surface any FAIL to the lawyer before reporting success.
+9. **Write/refresh `_matter-brief.md`** in the matter folder (column T). If the brief exists, read it and update with current information. If it doesn't exist, create it. Preserve `## Tracked Threads` (append new threads, advance last-seen dates — never rewrite) and `## Resolved / Historical` (append-only) verbatim. MERGE the live sections (Roles, Risks, Positions, Open Items) rather than appending duplicates; demote resolved items to `## Resolved / Historical`; never silently prune content. The brief is a current-state snapshot of the matter (soft warning at 250 lines, no hard cap — see "Matter Brief Format" below). This step happens automatically after saving the tracker — no need to ask the user for separate confirmation.
 10. **Calendar sync**: Invoke `calendar-sync.reconcile(updated_row)`. This creates new events for any newly-added deadlines, updates events whose dates or descriptions changed, and deletes events for deadlines that were pruned (e.g., expired court deadlines removed from column S). Report the diff to the user: "Calendar sync: X added, Y updated, Z removed." If any events were deleted because a deadline passed, name them explicitly so the user sees what's no longer on the calendar.
 
 ### 3. CLOSE MATTER
@@ -456,7 +493,7 @@ The tracker only knows about matters that were entered into it. Files that preda
      3. Apply the standard row formatting (borders, font, wrap text on C, I, J, S, and U only — see Row Formatting section)
      4. Delete the row from "Open Matters"
    - **Important**: When deleting from "Open Matters", do NOT delete the header row. If the closed matter is the only data row, the sheet should have just the header row remaining.
-9. Save the updated tracker to disk.
+9. Save the updated tracker to disk. Then run `python3 scripts/validate_tracker.py <tracker> <latest backup>` and surface any FAIL to the lawyer before reporting success.
 10. **Update `_matter-brief.md`** in the matter folder — append "FILE CLOSED" to the summary and mark open items as resolved or moot. If no brief exists, create a final one for the closed file.
 11. **Calendar sync**: Invoke `calendar-sync.cancel_all_for_matter(file_number)` to remove every event on Key Dates for this file — court, limitation, follow-ups, and any third-party prompts. Confirm: "Cancelled N events on Key Dates." Closed files should leave no trace on the calendar.
 
@@ -620,7 +657,7 @@ Use the xlsx skill's recalc script if any formulas are added.
 4. **Timelines are append-only on update.** When merging, never delete or alter existing timeline entries. Only add new ones in chronological position.
 5. **Find the tracker automatically.** See "Finding the Tracker" section below. If no tracker exists, create a fresh one in the Open Files directory.
 6. **Preserve existing data.** When editing the tracker, never overwrite or delete existing rows. Only append or modify the targeted row.
-7. **Flag if Gmail is unavailable.** If Gmail MCP tools are not available in the current environment, build the timeline from folder contents and tell the user. If both Gmail and folder are empty, proceed with manual entry — ask them to dictate the timeline events.
+7. **Flag if Gmail is unavailable or rate-limited.** If Gmail MCP tools are not available in the current environment, build the timeline from folder contents and tell the user. If a Gmail call returns a rate-limit / throttle / 429 error, stop calling Gmail for the rest of the operation, build from whatever was already pulled plus the folder scan, and disclose that the email pull was incomplete. If both Gmail and folder are empty, proceed with manual entry — ask them to dictate the timeline events.
 8. **Back up before writing.** Before any write operation (new, update, close), create a timestamped backup of the tracker (e.g., `matter-tracker-backup-2026-03-18.xlsx`) in a `backups/` subfolder alongside the tracker. Create the `backups/` folder if it doesn't exist. After writing the updated tracker, **verify the written file opens cleanly** by re-loading it with openpyxl and confirming the expected sheet and row count. Do NOT delete older backups -- let the folder accumulate history. The user can prune manually if it ever grows too large. If verification fails, alert the user that the write may have corrupted the file and point them to the most recent backup in `backups/`.
 9. **Check for Excel lock files.** Before writing, check for a lock file (`~$matter-tracker.xlsx`) in the same directory. If found, warn the user: "The tracker appears to be open in Excel (`~$matter-tracker.xlsx` lock file detected). Close it in Excel before I write, or the save may fail or corrupt the file." Wait for confirmation before proceeding.
 10. **Check for duplicates before adding.** Always run the Duplicate / Conflict Check before inserting a new matter row.
@@ -674,24 +711,31 @@ This 250-line soft warning matches the work-on-matter skill so briefs produced b
 
 # [Client Name] — [File #]
 
+⚠️ **ACTIVE DEADLINE:** [next dated deadline, or "none"]
+✓ **LAST ACTION:** [YYYY-MM-DD — one line]
+⏳ **AWAITING:** [who owes what]
+
 ## Matter Summary
 [2-3 sentences: what this matter is about, who the parties are, what stage it's at]
 
-## Roles
+## Current Stage
+[Where in the process; next critical date]
+
+## Roles [last update: YYYY-MM-DD]
 - Name (role) — source: [email date / doc filename + page / tracker col X]
 - Name (role) — source: [...]
 
-## Key Terms / Provisions
-[Only for transactional matters — price, term, material conditions, unusual clauses]
-
-## Risks & Issues Flagged
+## Risks & Issues Flagged [last update: YYYY-MM-DD]
 - [Concise bullet points of flagged risks, unusual provisions, practical concerns]
 
-## Positions Taken / Advice Given
+## Positions Taken / Advice Given [last update: YYYY-MM-DD]
 - [Key advice given, positions taken in negotiations, strategic decisions made — current state, not historical reasoning. Reasoning lives in _matter-decisions.md.]
 
-## Open Items
+## Open Items [last update: YYYY-MM-DD]
 - [What's still unresolved, pending, or needs follow-up]
+
+## Key Terms / Provisions
+[Only for transactional matters — price, term, material conditions, unusual clauses]
 
 ## Tracked Threads
 - [Gmail thread ID] — "[short subject label]" — last seen YYYY-MM-DD
@@ -735,3 +779,7 @@ Use the tags sparingly but honestly. An untagged claim is a guarantee to the nex
 ```
 > PRIVILEGED & CONFIDENTIAL — Solicitor-Client Privilege / Work Product
 ```
+
+## Client Profile for Repeat Clients
+
+Repeat clients get ONE `_client-profile.md` in the client's top-level folder: contact preferences, communication style, sensitivities, billing quirks. Matter briefs reference it ("See _client-profile.md") instead of re-documenting. When opening a second matter for an existing client, create the profile from the first matter's notes if it doesn't exist.
