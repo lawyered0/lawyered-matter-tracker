@@ -318,6 +318,17 @@ def write_cell(file_no, column_name, value):
     return write_cells(file_no, {column_name: value})
 
 
+def write_result(ok):
+    """JSON response for a write operation, with an HTTP error on failure.
+
+    The frontend's safeFetch only checks the HTTP status, so a failed write
+    must not come back as 200 or the UI reports it as saved.
+    """
+    if ok:
+        return jsonify({"success": True})
+    return jsonify({"error": "Save failed — matter not found or tracker not writable"}), 500
+
+
 def write_cells(file_no, updates):
     """Write multiple column values for a single matter in one save operation."""
     try:
@@ -423,12 +434,12 @@ def api_add_timeline(file_no):
     entry_text = data.get("text", "")
     if not entry_text:
         return jsonify({"error": "Text required"}), 400
-    return jsonify({"success": add_timeline_entry(file_no, entry_date, entry_text)})
+    return write_result(add_timeline_entry(file_no, entry_date, entry_text))
 
 
 @app.route("/api/matters/<file_no>/next-action", methods=["POST"])
 def api_update_next_action(file_no):
-    return jsonify({"success": write_cell(file_no, "Next Action / Deadline", (request.json or {}).get("text", ""))})
+    return write_result(write_cell(file_no, "Next Action / Deadline", (request.json or {}).get("text", "")))
 
 
 @app.route("/api/matters/<file_no>/contact", methods=["POST"])
@@ -438,7 +449,9 @@ def api_update_contact(file_no):
     for field, col in [("email", "Client Email"), ("phone", "Client Phone"), ("address", "Client Address"), ("other_parties", "Other Parties / Related Persons")]:
         if field in data:
             updates[col] = data[field]
-    return jsonify({"success": write_cells(file_no, updates) if updates else True})
+    if not updates:
+        return jsonify({"success": True})
+    return write_result(write_cells(file_no, updates))
 
 
 @app.route("/api/matters/<file_no>/limitation", methods=["POST"])
@@ -449,23 +462,24 @@ def api_update_limitation(file_no):
     deadline = data.get("deadline", "")
     if discovery and statute and not deadline:
         deadline = calc_limitation_deadline(discovery, statute) or ""
-    write_cells(file_no, {
+    ok = write_cells(file_no, {
         "Discovery Date": discovery,
         "Limitation Statute": statute,
         "Limitation Deadline": deadline,
     })
+    if not ok:
+        return jsonify({"error": "Save failed — matter not found or tracker not writable"}), 500
     return jsonify({"success": True, "calculated_deadline": deadline})
 
 
 @app.route("/api/matters/<file_no>/limitation/clear", methods=["POST"])
 def api_clear_limitation(file_no):
     """Remove limitation tracking from a matter."""
-    write_cells(file_no, {
+    return write_result(write_cells(file_no, {
         "Discovery Date": "",
         "Limitation Statute": "",
         "Limitation Deadline": "",
-    })
-    return jsonify({"success": True})
+    }))
 
 
 @app.route("/api/matters/<file_no>/court-deadlines", methods=["POST"])
@@ -480,15 +494,18 @@ def api_add_court_deadline(file_no):
 
     # Load existing deadlines
     matters = load_matters()
-    current = []
+    current = None
     for m in matters:
         if str(m.get("File #")) == str(file_no):
             current = parse_json_field(m.get("Court Deadlines"))
             break
+    if current is None:
+        return jsonify({"error": "Matter not found"}), 404
 
     current.append({"date": dl_date, "description": description, "source": source})
     current.sort(key=lambda x: x.get("date", ""))
-    write_cell(file_no, "Court Deadlines", json.dumps(current))
+    if not write_cell(file_no, "Court Deadlines", json.dumps(current)):
+        return jsonify({"error": "Save failed — tracker not writable"}), 500
     return jsonify({"success": True, "deadlines": current})
 
 
@@ -496,18 +513,24 @@ def api_add_court_deadline(file_no):
 def api_remove_court_deadline(file_no):
     """Remove a court deadline by index."""
     data = request.json or {}
-    idx = data.get("index", -1)
+    try:
+        idx = int(data.get("index", -1))
+    except (TypeError, ValueError):
+        return jsonify({"error": "Invalid index"}), 400
 
     matters = load_matters()
-    current = []
+    current = None
     for m in matters:
         if str(m.get("File #")) == str(file_no):
             current = parse_json_field(m.get("Court Deadlines"))
             break
+    if current is None:
+        return jsonify({"error": "Matter not found"}), 404
 
     if 0 <= idx < len(current):
         current.pop(idx)
-        write_cell(file_no, "Court Deadlines", json.dumps(current) if current else "")
+        if not write_cell(file_no, "Court Deadlines", json.dumps(current) if current else ""):
+            return jsonify({"error": "Save failed — tracker not writable"}), 500
         return jsonify({"success": True, "deadlines": current})
     return jsonify({"error": "Invalid index"}), 400
 
@@ -558,7 +581,7 @@ def api_conflict_check():
 @app.route("/api/matters/<file_no>/folder", methods=["POST"])
 def api_update_folder(file_no):
     path = (request.json or {}).get("path", "")
-    return jsonify({"success": write_cell(file_no, "Matter Folder", path)})
+    return write_result(write_cell(file_no, "Matter Folder", path))
 
 
 @app.route("/api/matters/<file_no>/folder/open", methods=["POST"])
@@ -573,8 +596,14 @@ def api_open_folder(file_no):
     if not subfolder:
         return jsonify({"error": "No folder linked"}), 404
     full_path = os.path.realpath(os.path.join(MATTER_FOLDER_BASE, subfolder))
-    # Prevent path traversal outside the base directory
-    if not full_path.startswith(os.path.realpath(MATTER_FOLDER_BASE)):
+    # Prevent path traversal outside the base directory. commonpath (not
+    # startswith) so a sibling like "matters-evil" can't slip past "matters".
+    base = os.path.realpath(MATTER_FOLDER_BASE)
+    try:
+        inside_base = os.path.commonpath([base, full_path]) == base
+    except ValueError:  # e.g. different drives on Windows
+        inside_base = False
+    if not inside_base:
         return jsonify({"error": "Invalid folder path"}), 400
     if not os.path.isdir(full_path):
         return jsonify({"error": f"Folder not found: {subfolder}"}), 404
@@ -762,7 +791,7 @@ def api_suggest_folders(file_no):
 def api_update_type(file_no):
     data = request.json or {}
     matter_type = data.get("type", "")
-    return jsonify({"success": write_cell(file_no, "Matter Type", matter_type)})
+    return write_result(write_cell(file_no, "Matter Type", matter_type))
 
 
 @app.route("/api/statutes")
@@ -773,8 +802,9 @@ def api_statutes():
 if __name__ == "__main__":
     # Customise these for your firm
     FIRM_NAME = os.environ.get("FIRM_NAME", "My Law Firm")
+    PORT = int(os.environ.get("PORT", "5001"))
     print(f"\n  {FIRM_NAME} — Matter Tracker")
     print(f"  Reading from: {XLSX_PATH}")
     print(f"  Backups saved to: {BACKUP_DIR}")
-    print(f"  Open http://localhost:5001 in your browser\n")
-    app.run(debug=os.environ.get("FLASK_DEBUG", "0") == "1", port=5001)
+    print(f"  Open http://localhost:{PORT} in your browser\n")
+    app.run(debug=os.environ.get("FLASK_DEBUG", "0") == "1", port=PORT)
