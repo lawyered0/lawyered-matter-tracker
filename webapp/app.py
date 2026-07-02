@@ -238,11 +238,11 @@ def _matter_to_dict(m):
     else:
         desc = safe_str(m.get("Matter Description")).lower()
         if "small claims" in desc or "sc-" in desc:
-            matter_type = "SCC"
+            matter_type = "Small Claims"
         elif "employment" in desc or "roe" in desc or "wrongful" in desc or "termination" in desc:
             matter_type = "Employment"
         elif "demand" in desc or "debt recovery" in desc:
-            matter_type = "Demand/Recovery"
+            matter_type = "Demand Letter"
         elif "shareholder" in desc or "share purchase" in desc or "corporate" in desc:
             matter_type = "Corporate"
         elif "contract" in desc or "lease" in desc:
