@@ -103,12 +103,8 @@ def main():
     if backup_path and backup_path.exists():
         try:
             bk = load_workbook(backup_path, data_only=True)
-            for sheet_name in ["Open Matters", "Closed Matters"]:
-                if sheet_name in bk.sheetnames and sheet_name in wb.sheetnames:
-                    old_count = count_data_rows(bk[sheet_name])
-                    new_count = count_data_rows(wb[sheet_name])
-                    total_old = sum(count_data_rows(bk[s]) for s in ["Open Matters", "Closed Matters"] if s in bk.sheetnames)
-                    total_new = sum(count_data_rows(wb[s]) for s in ["Open Matters", "Closed Matters"] if s in wb.sheetnames)
+            total_old = sum(count_data_rows(bk[s]) for s in ["Open Matters", "Closed Matters"] if s in bk.sheetnames)
+            total_new = sum(count_data_rows(wb[s]) for s in ["Open Matters", "Closed Matters"] if s in wb.sheetnames)
             if total_new < total_old:
                 err(f"Total row count decreased: {total_old} → {total_new} (possible data loss)")
         except Exception as e:
