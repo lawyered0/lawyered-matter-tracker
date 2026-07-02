@@ -56,9 +56,6 @@ def backup_spreadsheet():
     for old in backups[20:]:
         os.remove(os.path.join(BACKUP_DIR, old))
 
-MATTER_TYPES = ["SCC", "Employment", "Demand/Recovery", "Corporate", "Transactional", "Other"]
-
-
 def ensure_column_exists(column_name):
     """Add a column header to both sheets if it doesn't already exist."""
     wb = load_workbook(XLSX_PATH)
@@ -233,8 +230,10 @@ def _matter_to_dict(m):
     # Has limitation tracking been enabled?
     has_limitation = bool(discovery_date or limitation_statute or limitation_deadline)
 
+    # Matter Type is free text (the skills write values like "Advisory");
+    # honour whatever is in the sheet and only auto-detect when it's blank.
     manual_type = safe_str(m.get("Matter Type")).strip()
-    if manual_type and manual_type in MATTER_TYPES:
+    if manual_type:
         matter_type = manual_type
     else:
         desc = safe_str(m.get("Matter Description")).lower()
