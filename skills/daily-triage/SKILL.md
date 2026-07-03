@@ -24,8 +24,9 @@ Scan Gmail for recent emails, match them against open matters in the tracker, su
 Tracker writes go through tracker_write.py — never ad-hoc openpyxl (openpyxl is fine for reading):
 
 ```
-python3 scripts/tracker_write.py update --tracker "<tracker path>" --file-no N --set "COLUMN=value" [--set ...]
+python3 "<tracker dir>/scripts/tracker_write.py" update --tracker "<tracker path>" --file-no N --set "COLUMN=value" [--set ...]
 ```
+ `<tracker dir>` is the directory containing matter-tracker.xlsx — build the path from the tracker's own location (the scripts ship beside it in `scripts/`), so the guard stays reachable in sandboxed sessions where only the client folder is mounted. If the guard is somehow unreachable, PAUSE and flag it to the lawyer — proceed with a manual write (replicating backup + validation) only on the lawyer's explicit go-ahead, never silently.
 
 `update` is the only subcommand this skill uses (Step 5 auto-fills and approved gap fills). Every call does the Excel-lock check, a timestamped backup into `backups/`, an atomic save, and runs validate_tracker.py automatically. **Non-zero exit = not saved** — report the stderr to the lawyer; never fall back to direct openpyxl writes. The guard also rejects malformed values (bad date formats, multi-line or over-long Next Action, unknown columns) with exit 2 — if it rejects, fix the value to match the column contract and re-run; don't bypass.
 
@@ -127,7 +128,7 @@ These fields require judgment. Present them in the TRACKER GAPS section of the t
 Write auto-fill values with the guard — one `update` call per matter, batching that matter's fills as multiple `--set` flags:
 
 ```
-python3 scripts/tracker_write.py update --tracker "<tracker>" --file-no N --set "Client Email=..." --set "Other Parties / Related Persons=..." --set "Last Activity=YYYY-MM-DD"
+python3 "<tracker dir>/scripts/tracker_write.py" update --tracker "<tracker>" --file-no N --set "Client Email=..." --set "Other Parties / Related Persons=..." --set "Last Activity=YYYY-MM-DD"
 ```
 
 A non-zero exit means nothing was written. If the guard rejected the value (exit 2), fix it to match the column contract and re-run — never bypass with a direct openpyxl write.

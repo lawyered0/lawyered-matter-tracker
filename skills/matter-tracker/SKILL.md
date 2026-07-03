@@ -27,8 +27,9 @@ Plus a **Review** mode to display current open matters in conversation.
 ALL tracker writes go through the write-guard CLI — never ad-hoc openpyxl:
 
 ```
-python3 scripts/tracker_write.py <subcommand> --tracker "<tracker path>" ...
+python3 "<tracker dir>/scripts/tracker_write.py" <subcommand> --tracker "<tracker path>" ...
 ```
+ `<tracker dir>` is the directory containing matter-tracker.xlsx — build the path from the tracker's own location (the scripts ship beside it in `scripts/`), so the guard stays reachable in sandboxed sessions where only the client folder is mounted. If the guard is somehow unreachable, PAUSE and flag it to the lawyer — proceed with a manual write (replicating backup + validation) only on the lawyer's explicit go-ahead, never silently.
 
 Subcommands this skill uses:
 
